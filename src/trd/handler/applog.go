@@ -40,6 +40,6 @@ func ApplogHandler(w http.ResponseWriter, r *http.Request) {
 		util.Log.Error("json unmarshal:%s %s", err.Error(), string(body))
 		return
 	}
-	util.Log.Info("%v", applog)
+	util.Log.Info("%s", proto.LogFormat(applog))
 	w.WriteHeader(http.StatusOK)
 }
