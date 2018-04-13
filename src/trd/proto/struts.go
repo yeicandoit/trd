@@ -36,10 +36,12 @@ type Applog struct {
 
 func LogFormat(alog *Applog) string {
 	return fmt.Sprintf("key:%s group:%s from:%s channel:%s index:%d news_id:%d category_id:%d category_index:%d task_key:%s page:%d page_limit:%d use_time:%d udid:%s device_id:%s imei1:%s imei2:%s os:%s os_version:%s app_version:%s app_version_code:%d model:%s intranet_ip:%s mac:%s ssid:%s network_type:%s brand:%s is_simulator:%t device_feature:%s is_first:%t",
-		alog.Key, alog.Group, alog.Group, alog.Channel, alog.Index, alog.NewsId,
+		alog.Key, alog.Group, alog.From, alog.Channel, alog.Index, alog.NewsId,
 		alog.CategoryId, alog.CategoryIndex, alog.TaskKey, alog.Page,
 		alog.PageLimit, alog.UseTime, alog.Udid, alog.DeviceId, alog.Imei1,
 		alog.Imei2, alog.Os, alog.OsVersion, alog.AppVersion, alog.AppVersionCode,
 		alog.Model, alog.IntranetIp, alog.Mac, alog.Ssid, alog.NetworkType,
 		alog.Brand, alog.IsSimulator, alog.DeviceFeature, alog.IsFirst)
 }
+
+var reportData = "key:%s group:%s from:%s channel:%s index:%d news_id:%d category_id:%d category_index:%d task_key:%s page:%d page_limit:%d use_time:%d udid:%s device_id:%s imei1:%s imei2:%s os:%s os_version:%s app_version:%s app_version_code:%d model:%s intranet_ip:%s mac:%s ssid:%s network_type:%s brand:%s is_simulator:%t device_feature:%s is_first:%t"
