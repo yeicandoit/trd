@@ -15,7 +15,6 @@ const ServiceConfigFile = "conf/trd.yaml"
 var Log l4g.Logger
 
 var ServiceConfig struct {
-	ConfCheckInterval   int
 	ServerLogConfigFile string
 }
 
@@ -47,7 +46,6 @@ func init() {
 		panic(err)
 	}
 
-	CheckInterval = time.Duration(ServiceConfig.ConfCheckInterval)
 	Log = devkit.NewLogger(devkit.GetAbsPath(ServiceConfig.ServerLogConfigFile, rootPath))
 	Log.Info("app log server config: %+v", ServiceConfig)
 }
