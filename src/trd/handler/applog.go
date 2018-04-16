@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"runtime"
@@ -18,7 +19,14 @@ func ApplogHandler(w http.ResponseWriter, r *http.Request) {
 			util.Log.Error("%s", b[:n])
 		}
 	}()
-	_req, _ := requestQuery(r.URL.RawQuery)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		util.Log.Error("app log request:%s", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+	_req, _ := requestQuery(string(body))
 	rawData := strings.Split(_req["rd"], ",")
 	rawCommon, err := url.QueryUnescape(_req["rc"])
 	if nil == rawData || "" == rawCommon {
@@ -68,8 +76,7 @@ func ApplogHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return _req["token"]
 	}()
-	// TODO how to get userid?
-	user_id := ""
+	user_id := "-1"
 	is_first := str2bool(commonData[14])
 
 	for _, data := range rawData {
@@ -130,7 +137,7 @@ func limitLen(s string, length int) string {
 }
 
 func requestQuery(query string) (m map[string]string, err error) {
-    m = make(map[string]string)
+	m = make(map[string]string)
 	for query != "" {
 		key := query
 		if i := strings.IndexAny(key, "&;"); i >= 0 {
