@@ -18,16 +18,16 @@ func ApplogHandler(w http.ResponseWriter, r *http.Request) {
 			util.Log.Error("%s", b[:n])
 		}
 	}()
-	_req := r.URL.Query()
-	rawData := strings.Split(_req.Get("rd"), ",")
-	rawCommon, err := url.QueryUnescape(_req.Get("rc"))
+	_req, _ := requestQuery(r.URL.RawQuery)
+	rawData := strings.Split(_req["rd"], ",")
+	rawCommon, err := url.QueryUnescape(_req["rc"])
 	if nil == rawData || "" == rawCommon {
-		util.Log.Error("rd or rc is null, req:%s", _req.Encode())
+		util.Log.Error("rd or rc is null, req:%s", r.URL.RawQuery)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	if err != nil {
-		util.Log.Error("request rd data error:%s", err.Error())
+		util.Log.Error("request rd data:%s error:%s", r.URL.RawQuery, err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -66,7 +66,7 @@ func ApplogHandler(w http.ResponseWriter, r *http.Request) {
 		if "" != r.Header.Get("token") {
 			return r.Header.Get("token")
 		}
-		return _req.Get("token")
+		return _req["token"]
 	}()
 	// TODO how to get userid?
 	user_id := ""
@@ -127,4 +127,32 @@ func limitLen(s string, length int) string {
 	} else {
 		return s
 	}
+}
+
+func requestQuery(query string) (m map[string]string, err error) {
+    m = make(map[string]string)
+	for query != "" {
+		key := query
+		if i := strings.IndexAny(key, "&;"); i >= 0 {
+			key, query = key[:i], key[i+1:]
+		} else {
+			query = ""
+		}
+		if key == "" {
+			continue
+		}
+		value := ""
+		if i := strings.Index(key, "="); i >= 0 {
+			key, value = key[:i], key[i+1:]
+		}
+		key, err1 := url.QueryUnescape(key)
+		if err1 != nil {
+			if err == nil {
+				err = err1
+			}
+			continue
+		}
+		m[key] = value
+	}
+	return m, err
 }
