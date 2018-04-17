@@ -27,6 +27,7 @@ func ApplogHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 	_req, _ := requestQuery(string(body))
+	util.Log.Debug("_req:%+v", _req)
 	rawData := strings.Split(_req["rd"], ",")
 	rawCommon, err := url.QueryUnescape(_req["rc"])
 	if nil == rawData || "" == rawCommon {
@@ -44,7 +45,7 @@ func ApplogHandler(w http.ResponseWriter, r *http.Request) {
 		commonData[i], _ = url.QueryUnescape(v)
 	}
 	if "1" != commonData[0] {
-		util.Log.Error("common data flag:%d", commonData[0])
+		util.Log.Error("common data flag:%s", commonData[0])
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -58,25 +59,28 @@ func ApplogHandler(w http.ResponseWriter, r *http.Request) {
 	app_version_code := str2int(commonData[7])
 	model := commonData[8]
 	intranet_ip := commonData[9]
-	// TODO what does api->ip() mean in ApiHelper.php?
-	ip := util.GetRealIp(r)
+	ip := _req["ip"]
 	ssid := commonData[10]
 	network_type := commonData[11]
 	mac := commonData[12][:17]
 	brand := commonData[13]
 	is_simulator := str2bool(commonData[15])
 	device_feature := commonData[16]
-	device_id := limitLen(commonData[17], 32)
-	imei1 := limitLen(commonData[18], 20)
-	imei2 := limitLen(commonData[19], 20)
-	ua := r.UserAgent()
-	token := func() string {
-		if "" != r.Header.Get("token") {
-			return r.Header.Get("token")
-		}
-		return _req["token"]
-	}()
-	user_id := "-1"
+	device_id := ""
+	imei1 := ""
+	imei2 := ""
+	if 18 <= len(commonData) {
+		device_id = limitLen(commonData[17], 32)
+	}
+	if 19 <= len(commonData) {
+		imei1 = limitLen(commonData[18], 20)
+	}
+	if 20 <= len(commonData) {
+		imei2 = limitLen(commonData[19], 20)
+	}
+	ua, _ := url.QueryUnescape(_req["ua"])
+	token := _req["token"]
+	user_id := _req["user_id"]
 	is_first := str2bool(commonData[14])
 
 	for _, data := range rawData {
