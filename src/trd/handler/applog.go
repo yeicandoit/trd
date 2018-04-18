@@ -1,14 +1,23 @@
 package handler
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"runtime"
 	"strconv"
 	"strings"
+	"trd/proto"
 	"trd/util"
 )
+
+const (
+	KcontentType    = "Content-Type"
+	ContentTypeJson = "application/json"
+)
+
+var logstr = "{\"key\":\"%s\", \"group\":\"%s\", \"from\":\"%s\", \"channel\":\"%s\", \"index\":%d, \"news_id\":%d, \"category_id\":%d, \"category_index\":%d, \"task_key\":\"%s\", \"page\":%d, \"page_limit\":%d, \"use_time\":%d, \"udid\":\"%s\", \"device_id\":\"%s\", \"imei1\":\"%s\", \"imei2\":\"%s\", \"os\":\"%s\", \"os_version\":\"%s\", \"app_version\":\"%s\", \"app_version_code\":%d, \"model\":\"%s\", \"intranet_ip\":\"%s\", \"ip\":\"%s\", \"ssid\":\"%s\", \"network_type\":\"%s\", \"mac\":\"%s\", \"brand\":\"%s\", \"is_simulator\":\"%t\", \"device_feature\":\"%s\", \"ua\":\"%s\", \"token\":\"%s\", \"user_id\":\"%s\", \"is_first\":\"%t\"}"
 
 func ApplogHandler(w http.ResponseWriter, r *http.Request) {
 	defer func() {
@@ -16,12 +25,49 @@ func ApplogHandler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			b := make([]byte, 1<<16)
 			n := runtime.Stack(b, false)
-			util.Log.Error("%s", b[:n])
+			util.Log.Error("{\"error\":\"%s\"}", b[:n])
+		}
+	}()
+	if !strings.Contains(r.Header.Get(KcontentType), ContentTypeJson) {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		util.Log.Error("{\"error:\":\"read request:%s\"}", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+	applog := &proto.Applog{}
+	if err := json.Unmarshal(body, applog); err != nil {
+		util.Log.Error("{\"error\":\"json unmarshal:%s %s\"}", err.Error(), string(body))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	util.Log.Info(logstr, applog.Key, applog.Group, applog.From, applog.Channel,
+		applog.Index, applog.NewsId, applog.CategoryId, applog.CategoryIndex,
+		applog.TaskKey, applog.Page, applog.PageLimit, applog.UseTime,
+		applog.Udid, applog.DeviceId, applog.Imei1, applog.Imei2, applog.Os,
+		applog.OsVersion, applog.AppVersion, applog.AppVersionCode, applog.Model,
+		applog.IntranetIp, applog.Ip, applog.Ssid, applog.NetworkType, applog.Mac,
+		applog.Brand, applog.IsSimulator, applog.DeviceFeature, applog.Ua,
+		applog.Token, applog.UserId, applog.IsFirst)
+	w.WriteHeader(http.StatusOK)
+}
+
+func BatchlogHandler(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		if err := recover(); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			b := make([]byte, 1<<16)
+			n := runtime.Stack(b, false)
+			util.Log.Error("{\"error\":\"%s\"}", b[:n])
 		}
 	}()
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		util.Log.Error("app log request:%s", err.Error())
+		util.Log.Error("{\"error\":\"app log request:%s\"}", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -31,12 +77,12 @@ func ApplogHandler(w http.ResponseWriter, r *http.Request) {
 	rawData := strings.Split(_req["rd"], ",")
 	rawCommon, err := url.QueryUnescape(_req["rc"])
 	if nil == rawData || "" == rawCommon {
-		util.Log.Error("rd or rc is null, req:%s", r.URL.RawQuery)
+		util.Log.Error("{\"error\":\"rd or rc is null, req:%s\"}", r.URL.RawQuery)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	if err != nil {
-		util.Log.Error("request rd data:%s error:%s", r.URL.RawQuery, err.Error())
+		util.Log.Error("{\"error\":\"request rd data:%s error:%s\"}", r.URL.RawQuery, err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -45,7 +91,7 @@ func ApplogHandler(w http.ResponseWriter, r *http.Request) {
 		commonData[i], _ = url.QueryUnescape(v)
 	}
 	if "1" != commonData[0] {
-		util.Log.Error("common data flag:%s", commonData[0])
+		util.Log.Error("{\"error\":\"common data flag:%s\"}", commonData[0])
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -100,11 +146,10 @@ func ApplogHandler(w http.ResponseWriter, r *http.Request) {
 		category_id := str2int(arrD[5])
 		category_index := str2int(arrD[6])
 		task_key := arrD[7]
-		page := str2int(arrD[8]) // TODO check the logic
+		page := str2int(arrD[8])
 		page_limit := str2int(arrD[9])
 		use_time := str2int(arrD[10])
-		util.Log.Info("key:%s, group:%s, from:%s, channel:%s, index:%d, news_id:%d, category_id:%d, category_index:%d, task_key:%s, page:%d, page_limit:%d, use_time:%d, udid:%s, device_id:%s, imei1:%s, imei2:%s, os:%s, os_version:%s, app_version:%s, app_version_code:%d, model:%s, intranet_ip:%s, ip:%s, ssid:%s, network_type:%s, mac:%s, brand:%s, is_simulator:%t, device_feature:%s, ua:%s, token:%s, user_id:%s, is_first:%t",
-			key, group, from, channel, index, news_id, category_id,
+		util.Log.Info(logstr, key, group, from, channel, index, news_id, category_id,
 			category_index, task_key, page, page_limit, use_time, udid,
 			device_id, imei1, imei2, os, os_version, app_version,
 			app_version_code, model, intranet_ip, ip, ssid, network_type, mac,

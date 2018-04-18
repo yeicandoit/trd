@@ -33,7 +33,7 @@ func parseArgs() {
 	if !filepath.IsAbs(rootPath) {
 		p, err := filepath.Abs(rootPath)
 		if err != nil {
-			panic("Convert root path to abs path failed")
+			panic("{\"panic\":\"Convert root path to abs path failed\"}")
 		}
 		rootPath = p
 	}
@@ -47,5 +47,5 @@ func init() {
 	}
 
 	Log = devkit.NewLogger(devkit.GetAbsPath(ServiceConfig.ServerLogConfigFile, rootPath))
-	Log.Info("app log server config: %+v", ServiceConfig)
+	Log.Info("{\"info\":\"app log server config: %+v\"}", ServiceConfig)
 }
