@@ -5,14 +5,14 @@ type Applog struct {
 	Group          string `json:"group"`
 	From           string `json:"from"`
 	Channel        string `json:"channel"`
-	Index          int32  `json:"index"`
-	NewsId         int32  `json:"news_id"`
-	CategoryId     int32  `json:"category_id"`
-	CategoryIndex  int32  `json:"category_index"`
+	Index          int    `json:"index"`
+	NewsId         int    `json:"news_id"`
+	CategoryId     int    `json:"category_id"`
+	CategoryIndex  int    `json:"category_index"`
 	TaskKey        string `json:"task_key"`
-	Page           int32  `json:"page"`
-	PageLimit      int32  `json:"page_limit"`
-	UseTime        int32  `json:"use_time"`
+	Page           int    `json:"page"`
+	PageLimit      int    `json:"page_limit"`
+	UseTime        int    `json:"use_time"`
 	Udid           string `json:"udid"`
 	DeviceId       string `json:"device_id"`
 	Imei1          string `json:"imei1"`
@@ -20,7 +20,7 @@ type Applog struct {
 	Os             string `json:"os"`
 	OsVersion      string `json:"os_version"`
 	AppVersion     string `json:"app_version"`
-	AppVersionCode int32  `json:"app_version_code"`
+	AppVersionCode int    `json:"app_version_code"`
 	Model          string `json:"model"`
 	IntranetIp     string `json:"intranet_ip"`
 	Ip             string `json:"ip"`
@@ -32,6 +32,6 @@ type Applog struct {
 	DeviceFeature  string `json:"device_feature"`
 	Ua             string `json:"ua"`
 	Token          string `json:"token"`
-	UserId         string `json:"user_id"`
+	UserId         int    `json:"user_id"`
 	IsFirst        bool   `json:"is_first"`
 }

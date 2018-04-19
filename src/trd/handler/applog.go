@@ -12,12 +12,7 @@ import (
 	"trd/util"
 )
 
-const (
-	KcontentType    = "Content-Type"
-	ContentTypeJson = "application/json"
-)
-
-var logstr = "{\"key\":\"%s\", \"group\":\"%s\", \"from\":\"%s\", \"channel\":\"%s\", \"index\":%d, \"news_id\":%d, \"category_id\":%d, \"category_index\":%d, \"task_key\":\"%s\", \"page\":%d, \"page_limit\":%d, \"use_time\":%d, \"udid\":\"%s\", \"device_id\":\"%s\", \"imei1\":\"%s\", \"imei2\":\"%s\", \"os\":\"%s\", \"os_version\":\"%s\", \"app_version\":\"%s\", \"app_version_code\":%d, \"model\":\"%s\", \"intranet_ip\":\"%s\", \"ip\":\"%s\", \"ssid\":\"%s\", \"network_type\":\"%s\", \"mac\":\"%s\", \"brand\":\"%s\", \"is_simulator\":\"%t\", \"device_feature\":\"%s\", \"ua\":\"%s\", \"token\":\"%s\", \"user_id\":\"%s\", \"is_first\":\"%t\"}"
+var logstr = "{\"key\":\"%s\", \"group\":\"%s\", \"from\":\"%s\", \"channel\":\"%s\", \"index\":%d, \"news_id\":%d, \"category_id\":%d, \"category_index\":%d, \"task_key\":\"%s\", \"page\":%d, \"page_limit\":%d, \"use_time\":%d, \"udid\":\"%s\", \"device_id\":\"%s\", \"imei1\":\"%s\", \"imei2\":\"%s\", \"os\":\"%s\", \"os_version\":\"%s\", \"app_version\":\"%s\", \"app_version_code\":%d, \"model\":\"%s\", \"intranet_ip\":\"%s\", \"ip\":\"%s\", \"ssid\":\"%s\", \"network_type\":\"%s\", \"mac\":\"%s\", \"brand\":\"%s\", \"is_simulator\":\"%t\", \"device_feature\":\"%s\", \"ua\":\"%s\", \"token\":\"%s\", \"user_id\":\"%d\", \"is_first\":\"%t\"}"
 
 func ApplogHandler(w http.ResponseWriter, r *http.Request) {
 	defer func() {
@@ -28,10 +23,6 @@ func ApplogHandler(w http.ResponseWriter, r *http.Request) {
 			util.Log.Error("{\"error\":\"%s\"}", b[:n])
 		}
 	}()
-	if !strings.Contains(r.Header.Get(KcontentType), ContentTypeJson) {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		util.Log.Error("{\"error:\":\"read request:%s\"}", err.Error())
@@ -39,8 +30,10 @@ func ApplogHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
+	_req, _ := requestQuery(string(body))
+	util.Log.Debug("_req:%+v", _req)
 	applog := &proto.Applog{}
-	if err := json.Unmarshal(body, applog); err != nil {
+	if err := json.Unmarshal([]byte(_req["report_data"]), applog); err != nil {
 		util.Log.Error("{\"error\":\"json unmarshal:%s %s\"}", err.Error(), string(body))
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -126,7 +119,7 @@ func BatchlogHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	ua, _ := url.QueryUnescape(_req["ua"])
 	token := _req["token"]
-	user_id := _req["user_id"]
+	user_id := str2int(_req["user_id"])
 	is_first := str2bool(commonData[14])
 
 	for _, data := range rawData {
@@ -189,7 +182,7 @@ func requestQuery(query string) (m map[string]string, err error) {
 	m = make(map[string]string)
 	for query != "" {
 		key := query
-		if i := strings.IndexAny(key, "&;"); i >= 0 {
+		if i := strings.IndexAny(key, "&"); i >= 0 {
 			key, query = key[:i], key[i+1:]
 		} else {
 			query = ""
