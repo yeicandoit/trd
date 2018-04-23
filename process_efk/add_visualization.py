@@ -89,15 +89,17 @@ def del_visualization(keys=[]):
     with open('data_statistics.csv', 'r') as f:
         for line in f.readlines():
             info = line.strip().split(',')
-            key = info[2]
-            url_pv = URL_ELASTICSEARCH_KIBANA % key + "_PV"
-            requests.delete(url_pv, timeout=(10, 20))
-            url_uv = URL_ELASTICSEARCH_KIBANA % key + "_UV"
-            requests.delete(url_uv, timeout=(10, 20))
+            raw_key = info[2]
+            key = info[1]
+            if string.find(key, "uv") != -1:
+            	url_uv = URL_ELASTICSEARCH_KIBANA % raw_key + "_UV"
+            	requests.delete(url_uv, timeout=(10, 20))
+            if string.find(key, "pv") != -1:
+            	url_pv = URL_ELASTICSEARCH_KIBANA % raw_key + "_PV"
+            	requests.delete(url_pv, timeout=(10, 20))
 
 
 if __name__ == '__main__':
     add_pv()
     add_uv()
-    # keys = get_keys()
     # del_visualization()
