@@ -8,11 +8,12 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 	"trd/proto"
 	"trd/util"
 )
 
-var logstr = "{\"key\":\"%s\", \"group\":\"%s\", \"from\":\"%s\", \"channel\":\"%s\", \"index\":%d, \"news_id\":%d, \"category_id\":%d, \"category_index\":%d, \"task_key\":\"%s\", \"page\":%d, \"page_limit\":%d, \"use_time\":%d, \"udid\":\"%s\", \"device_id\":\"%s\", \"imei1\":\"%s\", \"imei2\":\"%s\", \"os\":\"%s\", \"os_version\":\"%s\", \"app_version\":\"%s\", \"app_version_code\":%d, \"model\":\"%s\", \"intranet_ip\":\"%s\", \"ip\":\"%s\", \"ssid\":\"%s\", \"network_type\":\"%s\", \"mac\":\"%s\", \"brand\":\"%s\", \"is_simulator\":\"%t\", \"device_feature\":\"%s\", \"ua\":\"%s\", \"token\":\"%s\", \"user_id\":\"%d\", \"is_first\":\"%t\"}"
+var logstr = "{\"@timestamp\":\"%s\", \"key\":\"%s\", \"group\":\"%s\", \"from\":\"%s\", \"channel\":\"%s\", \"index\":%d, \"news_id\":%d, \"category_id\":%d, \"category_index\":%d, \"task_key\":\"%s\", \"page\":%d, \"page_limit\":%d, \"use_time\":%d, \"udid\":\"%s\", \"device_id\":\"%s\", \"imei1\":\"%s\", \"imei2\":\"%s\", \"os\":\"%s\", \"os_version\":\"%s\", \"app_version\":\"%s\", \"app_version_code\":%d, \"model\":\"%s\", \"intranet_ip\":\"%s\", \"ip\":\"%s\", \"ssid\":\"%s\", \"network_type\":\"%s\", \"mac\":\"%s\", \"brand\":\"%s\", \"is_simulator\":\"%t\", \"device_feature\":\"%s\", \"ua\":\"%s\", \"token\":\"%s\", \"user_id\":\"%d\", \"is_first\":\"%t\"}"
 
 func ApplogHandler(w http.ResponseWriter, r *http.Request) {
 	defer func() {
@@ -30,15 +31,16 @@ func ApplogHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
-	_req, _ := requestQuery(string(body))
+	_req, _ := url.ParseQuery(string(body))
 	util.Log.Debug("_req:%+v", _req)
 	applog := &proto.Applog{}
-	if err := json.Unmarshal([]byte(_req["report_data"]), applog); err != nil {
+	if err := json.Unmarshal([]byte(_req.Get("report_data")), applog); err != nil {
 		util.Log.Error("{\"error\":\"json unmarshal:%s %s\"}", err.Error(), string(body))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	util.Log.Info(logstr, applog.Key, applog.Group, applog.From, applog.Channel,
+	util.Log.Info(logstr, time.Now().Format("2006-01-02T15:04:05.000+08:00"),
+		applog.Key, applog.Group, applog.From, applog.Channel,
 		applog.Index, applog.NewsId, applog.CategoryId, applog.CategoryIndex,
 		applog.TaskKey, applog.Page, applog.PageLimit, applog.UseTime,
 		applog.Udid, applog.DeviceId, applog.Imei1, applog.Imei2, applog.Os,
@@ -64,11 +66,21 @@ func BatchlogHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	if !strings.Contains(r.Header.Get("Content-Type"), "application/json") {
+		util.Log.Error("{\"error\":\"Content-Type is not jpplication/son:%s\"}", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	defer r.Body.Close()
-	_req, _ := requestQuery(string(body))
-	util.Log.Debug("_req:%+v", _req)
-	rawData := strings.Split(_req["rd"], ",")
-	rawCommon, err := url.QueryUnescape(_req["rc"])
+	batchlog := &proto.Batchlog{}
+	if err := json.Unmarshal(body, batchlog); err != nil {
+		util.Log.Error("{\"error\":\"json unmarshal:%s %s\"}", err.Error(), string(body))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	util.Log.Debug("batchlog:%+v", batchlog)
+	rawData := strings.Split(batchlog.Rd, ",")
+	rawCommon, err := url.QueryUnescape(batchlog.Rc)
 	if nil == rawData || "" == rawCommon {
 		util.Log.Error("{\"error\":\"rd or rc is null, req:%s\"}", r.URL.RawQuery)
 		w.WriteHeader(http.StatusBadRequest)
@@ -98,7 +110,7 @@ func BatchlogHandler(w http.ResponseWriter, r *http.Request) {
 	app_version_code := str2int(commonData[7])
 	model := commonData[8]
 	intranet_ip := commonData[9]
-	ip := _req["ip"]
+	ip := batchlog.Ip
 	ssid := commonData[10]
 	network_type := commonData[11]
 	mac := commonData[12][:17]
@@ -117,9 +129,9 @@ func BatchlogHandler(w http.ResponseWriter, r *http.Request) {
 	if 20 <= len(commonData) {
 		imei2 = limitLen(commonData[19], 20)
 	}
-	ua, _ := url.QueryUnescape(_req["ua"])
-	token := _req["token"]
-	user_id := str2int(_req["user_id"])
+	ua, _ := url.QueryUnescape(batchlog.Ua)
+	token := batchlog.Token
+	user_id := batchlog.UserId
 	is_first := str2bool(commonData[14])
 
 	for _, data := range rawData {
@@ -142,7 +154,8 @@ func BatchlogHandler(w http.ResponseWriter, r *http.Request) {
 		page := str2int(arrD[8])
 		page_limit := str2int(arrD[9])
 		use_time := str2int(arrD[10])
-		util.Log.Info(logstr, key, group, from, channel, index, news_id, category_id,
+		util.Log.Info(logstr, time.Now().Format("2006-01-02T15:04:05.000+08:00"),
+			key, group, from, channel, index, news_id, category_id,
 			category_index, task_key, page, page_limit, use_time, udid,
 			device_id, imei1, imei2, os, os_version, app_version,
 			app_version_code, model, intranet_ip, ip, ssid, network_type, mac,

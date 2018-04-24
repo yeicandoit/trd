@@ -35,3 +35,12 @@ type Applog struct {
 	UserId         int    `json:"user_id"`
 	IsFirst        bool   `json:"is_first"`
 }
+
+type Batchlog struct {
+	Rd     string `json:"rd"`
+	Rc     string `json:"rc"`
+	Ip     string `json:"ip"`
+	Ua     string `json:"ua"`
+	Token  string `json:"token"`
+	UserId int    `json:"user_id"`
+}

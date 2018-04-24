@@ -1,3 +1,6 @@
 src/trd/trd
 src/trd/simulate_query/simulate_query
 log/
+src/github.com/
+src/tripod/
+src/trd/build.sh
