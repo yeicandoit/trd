@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 
 
 URL_ELASTICSEARCH_APPLOG = "http://localhost:9200/applog-*/doc/_search"
+URL_ELASTICSEARCH_APP_STAY = "http://localhost:9200/app-stay/doc"
 JSON_HEADER = {"Content-Type": "application/json"}
 
 
@@ -150,6 +151,15 @@ def uniq_device(query={}):
         return 1
 
 
+def update_app_stay(app_stay_first=1, app_stay=1):
+    app_stay_data = {
+        "@timestamp": datetime.today().isoformat() + "+08:00",
+        "app_stay": app_stay,
+        "app_stay_first": app_stay_first
+    }
+    requests.post(URL_ELASTICSEARCH_APP_STAY, headers=JSON_HEADER,
+                  data=json.dumps(app_stay_data), timeout=(10, 20))
+
 
 if __name__ == '__main__':
     query_sum_time = get_query_use_time()
@@ -158,5 +168,4 @@ if __name__ == '__main__':
     st = sum_time(copy.deepcopy(query_sum_time))
     udf = uniq_device_is_first(copy.deepcopy(query_device))
     ud = uniq_device(copy.deepcopy(query_device))
-    print stf, st, udf, ud
-    print stf/udf, st/ud
+    update_app_stay(int(stf/udf), int(st/ud))
