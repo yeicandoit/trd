@@ -21,7 +21,8 @@ func ApplogHandler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			b := make([]byte, 1<<16)
 			n := runtime.Stack(b, false)
-			util.Log.Error("{\"error\":\"%s\"}", b[:n])
+			// filebeat could not parse this log
+			// util.Log.Error("{\"error\":\"%s\"}", b[:n])
 			w.Write(b[:n])
 		}
 	}()
@@ -62,7 +63,8 @@ func BatchlogHandler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			b := make([]byte, 1<<16)
 			n := runtime.Stack(b, false)
-			util.Log.Error("{\"error\":\"%s\"}", b[:n])
+			// filebeat could not parse this log
+			// util.Log.Error("{\"error\":\"%s\"}", b[:n])
 			w.Write(b[:n])
 		}
 	}()
