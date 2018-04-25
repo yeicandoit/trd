@@ -22,12 +22,14 @@ func ApplogHandler(w http.ResponseWriter, r *http.Request) {
 			b := make([]byte, 1<<16)
 			n := runtime.Stack(b, false)
 			util.Log.Error("{\"error\":\"%s\"}", b[:n])
+			w.Write(b[:n])
 		}
 	}()
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		util.Log.Error("{\"error:\":\"read request:%s\"}", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("read request:" + err.Error()))
 		return
 	}
 	defer r.Body.Close()
@@ -37,17 +39,20 @@ func ApplogHandler(w http.ResponseWriter, r *http.Request) {
 	if err := json.Unmarshal([]byte(_req.Get("report_data")), applog); err != nil {
 		util.Log.Error("{\"error\":\"json unmarshal:%s %s\"}", err.Error(), string(body))
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("json unmarshal:" + err.Error()))
 		return
 	}
 	util.Log.Info(logstr, time.Now().Format("2006-01-02T15:04:05.000+08:00"),
 		applog.Key, applog.Group, applog.From, applog.Channel,
-		applog.Index, applog.NewsId, applog.CategoryId, applog.CategoryIndex,
-		applog.TaskKey, applog.Page, applog.PageLimit, applog.UseTime,
-		applog.Udid, applog.DeviceId, applog.Imei1, applog.Imei2, applog.Os,
-		applog.OsVersion, applog.AppVersion, applog.AppVersionCode, applog.Model,
-		applog.IntranetIp, applog.Ip, applog.Ssid, applog.NetworkType, applog.Mac,
+		checkZero(applog.Index), checkZero(applog.NewsId),
+		checkZero(applog.CategoryId), checkZero(applog.CategoryIndex),
+		applog.TaskKey, checkZero(applog.Page), checkZero(applog.PageLimit),
+		checkZero(applog.UseTime), applog.Udid, applog.DeviceId, applog.Imei1,
+		applog.Imei2, applog.Os, applog.OsVersion, applog.AppVersion,
+		checkZero(applog.AppVersionCode), applog.Model, applog.IntranetIp,
+		applog.Ip, applog.Ssid, applog.NetworkType, applog.Mac,
 		applog.Brand, applog.IsSimulator, applog.DeviceFeature, applog.Ua,
-		applog.Token, applog.UserId, applog.IsFirst)
+		applog.Token, checkZero(applog.UserId), applog.IsFirst)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -58,17 +63,20 @@ func BatchlogHandler(w http.ResponseWriter, r *http.Request) {
 			b := make([]byte, 1<<16)
 			n := runtime.Stack(b, false)
 			util.Log.Error("{\"error\":\"%s\"}", b[:n])
+			w.Write(b[:n])
 		}
 	}()
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		util.Log.Error("{\"error\":\"app log request:%s\"}", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("app log request:" + err.Error()))
 		return
 	}
 	if !strings.Contains(r.Header.Get("Content-Type"), "application/json") {
-		util.Log.Error("{\"error\":\"Content-Type is not jpplication/son:%s\"}", err.Error())
+		util.Log.Error("{\"error\":\"Content-Type is not application/json:%s\"}", r.Header.Get("Content-Type"))
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Content-Type is not jpplication/son:" + r.Header.Get("Content-Type")))
 		return
 	}
 	defer r.Body.Close()
@@ -76,6 +84,7 @@ func BatchlogHandler(w http.ResponseWriter, r *http.Request) {
 	if err := json.Unmarshal(body, batchlog); err != nil {
 		util.Log.Error("{\"error\":\"json unmarshal:%s %s\"}", err.Error(), string(body))
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("json unmarshal:" + err.Error()))
 		return
 	}
 	util.Log.Debug("batchlog:%+v", batchlog)
@@ -84,11 +93,13 @@ func BatchlogHandler(w http.ResponseWriter, r *http.Request) {
 	if nil == rawData || "" == rawCommon {
 		util.Log.Error("{\"error\":\"rd or rc is null, req:%s\"}", r.URL.RawQuery)
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("rd or rc is null"))
 		return
 	}
 	if err != nil {
 		util.Log.Error("{\"error\":\"request rd data:%s error:%s\"}", r.URL.RawQuery, err.Error())
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("request rd data:" + err.Error()))
 		return
 	}
 	commonData := strings.Split(rawCommon, ",")
@@ -98,6 +109,7 @@ func BatchlogHandler(w http.ResponseWriter, r *http.Request) {
 	if "1" != commonData[0] {
 		util.Log.Error("{\"error\":\"common data flag:%s\"}", commonData[0])
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("common data flag is not 1"))
 		return
 	}
 
@@ -131,7 +143,7 @@ func BatchlogHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	ua, _ := url.QueryUnescape(batchlog.Ua)
 	token := batchlog.Token
-	user_id := batchlog.UserId
+	user_id := checkZero(batchlog.UserId)
 	is_first := str2bool(commonData[14])
 
 	for _, data := range rawData {
@@ -191,30 +203,9 @@ func limitLen(s string, length int) string {
 	}
 }
 
-func requestQuery(query string) (m map[string]string, err error) {
-	m = make(map[string]string)
-	for query != "" {
-		key := query
-		if i := strings.IndexAny(key, "&"); i >= 0 {
-			key, query = key[:i], key[i+1:]
-		} else {
-			query = ""
-		}
-		if key == "" {
-			continue
-		}
-		value := ""
-		if i := strings.Index(key, "="); i >= 0 {
-			key, value = key[:i], key[i+1:]
-		}
-		key, err1 := url.QueryUnescape(key)
-		if err1 != nil {
-			if err == nil {
-				err = err1
-			}
-			continue
-		}
-		m[key] = value
+func checkZero(i int) int {
+	if 0 == i {
+		return -1
 	}
-	return m, err
+	return i
 }
