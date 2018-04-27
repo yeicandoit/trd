@@ -133,7 +133,7 @@ def sum_time(query={}):
         # print r_json
         return r_json["aggregations"]["sum_time"]["value"]
     else:
-        print "request applog-%s index failed, status_code:%d, reason:%s" % (
+        print "request applog index failed, status_code:%d, reason:%s" % (
             r.status_code, r.reason)
         return []
 
