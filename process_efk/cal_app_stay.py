@@ -34,6 +34,13 @@ def get_query_use_time():
                                 "format": "epoch_millis"
                             }
                         }
+                    },
+                    {
+                        "match_phrase": {
+                            "key.keyword": {
+                                "query": "app_common_use_time"
+                            }
+                        }
                     }
                 ],
                 "must_not": [
