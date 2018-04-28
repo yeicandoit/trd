@@ -36,6 +36,9 @@ REMAIN_MAPPING = {
         "remain_rate_5d": {
             "type": "float"
         },
+        "remain_rate_6d": {
+            "type": "float"
+        },
         "remain_rate_7d": {
             "type": "float"
         },
