@@ -11,8 +11,9 @@ JSON_HEADER = {"Content-Type": "application/json"}
 
 
 def get_query_use_time():
-    yesterday = datetime.today() + timedelta(-1)
-    twodays_ago = datetime.today() + timedelta(-2)
+    now_time = int(time.time())
+    day_time = now_time - now_time % 86400 + time.timezone
+    yesterday = day_time - 86400
     search_data = {
         "size": 0,
         "aggs": {
@@ -28,8 +29,8 @@ def get_query_use_time():
                     {
                         "range": {
                             "@timestamp": {
-                                "gte": int(time.mktime(twodays_ago.timetuple())) * 1000,
-                                "lte": int(time.mktime(yesterday.timetuple())) * 1000,
+                                "gte": yesterday * 1000,
+                                "lte": (yesterday + 86400) * 1000 - 1,
                                 "format": "epoch_millis"
                             }
                         }
@@ -52,8 +53,9 @@ def get_query_use_time():
 
 
 def get_query_device():
-    yesterday = datetime.today() + timedelta(-1)
-    twodays_ago = datetime.today() + timedelta(-2)
+    now_time = int(time.time())
+    day_time = now_time - now_time % 86400 + time.timezone
+    yesterday = day_time - 86400
     search_data = {
         "size": 0,
         "aggs": {
@@ -69,9 +71,16 @@ def get_query_device():
                     {
                         "range": {
                             "@timestamp": {
-                                "gte": int(time.mktime(twodays_ago.timetuple())) * 1000,
-                                "lte": int(time.mktime(yesterday.timetuple())) * 1000,
+                                "gte": yesterday * 1000,
+                                "lte": (yesterday + 86400) * 1000 - 1,
                                 "format": "epoch_millis"
+                            }
+                        }
+                    },
+                    {
+                        "match_phrase": {
+                            "key.keyword": {
+                                "query": "app_common_use_time"
                             }
                         }
                     }
@@ -152,8 +161,9 @@ def uniq_device(query={}):
 
 
 def update_app_stay(app_stay_first=1, app_stay=1):
+    yesterday = datetime.today() - timedelta(1)
     app_stay_data = {
-        "@timestamp": datetime.today().isoformat() + "+08:00",
+        "@timestamp": yesterday.isoformat() + "+08:00",
         "app_stay": app_stay,
         "app_stay_first": app_stay_first
     }
