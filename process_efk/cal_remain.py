@@ -5,6 +5,7 @@ import requests
 import json
 import time
 import copy
+from util import time_tool
 from datetime import datetime, timedelta
 
 
@@ -53,9 +54,7 @@ REMAIN_MAPPING = {
 
 
 def get_query_device(ndays):
-    now_time = int(time.time())
-    day_time = now_time - now_time % 86400 + time.timezone
-    ndays_ago = day_time - ndays * 86400
+    ndays_ago = time_tool.get_weehours_of_someday(ndays)
     search_data = {
         "size": 0,
         "aggs": {
@@ -129,6 +128,7 @@ def set_remain_rate(key, rate, new_device_num):
     if r_json["found"]:
         data = r_json["_source"]
         data[remain_rate_key] = rate
+        data["new_device_num"] = new_device_num
         requests.post(url, headers=JSON_HEADER,
                       data=json.dumps(data), timeout=(10, 20))
     else:
@@ -144,16 +144,16 @@ def set_remain_rate(key, rate, new_device_num):
 if __name__ == '__main__':
     # create_remain_index()
     # set_remain_rate(5, 0.19, 68678)
-    yud = uniq_device(URL_ELASTICSEARCH_APPLOG, get_query_device(1))
-    nd1day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(2))
-    nd2day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(3))
-    nd3day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(4))
-    nd4day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(5))
-    nd5day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(6))
-    nd6day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(7))
-    nd7day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(8))
-    nd14day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(15))
-    nd30day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(31))
+    yud = uniq_device(URL_ELASTICSEARCH_APPLOG, get_query_device(-1))
+    nd1day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(-2))
+    nd2day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(-3))
+    nd3day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(-4))
+    nd4day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(-5))
+    nd5day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(-6))
+    nd6day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(-7))
+    nd7day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(-8))
+    nd14day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(-15))
+    nd30day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(-31))
 
     for key, nd in [(1, nd1day), (2, nd2day), (3, nd3day), (4, nd4day), (5, nd5day), (6, nd6day), (7, nd7day), (14, nd14day), (30, nd30day)]:
         ret = list(set(nd).intersection(set(yud)))

@@ -5,6 +5,7 @@ import requests
 import json
 import time
 import copy
+from util import time_tool
 from datetime import datetime, timedelta
 
 
@@ -50,9 +51,7 @@ REMAIN_MAPPING = {
 
 
 def get_query_user(ndays):
-    now_time = int(time.time())
-    day_time = now_time - now_time % 86400 + time.timezone
-    ndays_ago = day_time - ndays * 86400
+    ndays_ago = time_tool.get_weehours_of_someday(ndays)
     search_data = {
         "size": 0,
         "aggs": {
@@ -141,16 +140,16 @@ def set_remain_rate(key, rate, new_user_num):
 
 if __name__ == '__main__':
     # create_remain_index()
-    yud = uniq_user(URL_ELASTICSEARCH_APPLOG, get_query_user(1))
-    nd1day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(2))
-    nd2day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(3))
-    nd3day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(4))
-    nd4day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(5))
-    nd5day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(6))
-    nd6day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(7))
-    nd7day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(8))
-    nd14day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(15))
-    nd30day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(31))
+    yud = uniq_user(URL_ELASTICSEARCH_APPLOG, get_query_user(-1))
+    nd1day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(-2))
+    nd2day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(-3))
+    nd3day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(-4))
+    nd4day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(-5))
+    nd5day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(-6))
+    nd6day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(-7))
+    nd7day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(-8))
+    nd14day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(-15))
+    nd30day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(-31))
 
     for key, nd in [(1, nd1day), (2, nd2day), (3, nd3day), (4, nd4day), (5, nd5day), (6, nd6day), (7, nd7day), (14, nd14day), (30, nd30day)]:
         ret = list(set(nd).intersection(set(yud)))

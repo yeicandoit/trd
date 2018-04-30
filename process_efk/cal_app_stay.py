@@ -2,6 +2,7 @@ import requests
 import json
 import time
 import copy
+from util import time_tool
 from datetime import datetime, timedelta
 
 
@@ -11,9 +12,7 @@ JSON_HEADER = {"Content-Type": "application/json"}
 
 
 def get_query_use_time():
-    now_time = int(time.time())
-    day_time = now_time - now_time % 86400 + time.timezone
-    yesterday = day_time - 86400
+    yesterday = time_tool.get_weehours_of_someday(-1)
     search_data = {
         "size": 0,
         "aggs": {
@@ -60,9 +59,7 @@ def get_query_use_time():
 
 
 def get_query_device():
-    now_time = int(time.time())
-    day_time = now_time - now_time % 86400 + time.timezone
-    yesterday = day_time - 86400
+    yesterday = time_tool.get_weehours_of_someday(-1)
     search_data = {
         "size": 0,
         "aggs": {
