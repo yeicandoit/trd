@@ -53,8 +53,7 @@ REMAIN_MAPPING = {
 }
 
 
-def get_query_device(ndays):
-    ndays_ago = time_tool.get_weehours_of_someday(ndays)
+def get_query_device():
     search_data = {
         "size": 0,
         "aggs": {
@@ -72,8 +71,8 @@ def get_query_device(ndays):
                     {
                         "range": {
                             "@timestamp": {
-                                "gte": ndays_ago * 1000,
-                                "lte": (ndays_ago + 86400) * 1000 - 1,
+                                "gte": 0,
+                                "lte": 0,
                                 "format": "epoch_millis"
                             }
                         }
@@ -95,19 +94,35 @@ def get_query_device(ndays):
     return search_data
 
 
-def uniq_device(url="", query={}):
-    r = requests.post(url, headers=JSON_HEADER,
-                      data=json.dumps(query), timeout=(30, 60))
-    if 200 == r.status_code:
-        r_json = r.json()
-        # print r_json
-        arr_device_id = [device['key']
-                         for device in r_json['aggregations']['uniq_device']['buckets']]
-        return arr_device_id
-    else:
-        print "request applog index failed, status_code:%d, reason:%s" % (
-            r.status_code, r.reason)
-        return 1
+def uniq_device_1day(url="", query={}, nday=1):
+    start = time_tool.get_weehours_of_someday(nday)
+    devices = []
+    for i in range(24):
+        query["query"]["bool"]["must"] = [
+            {
+                "range": {
+                    "@timestamp": {
+                        "gte": (start + i * 3600) * 1000,
+                        "lte": (start + (i + 1) * 3600) * 1000 - 1,
+                        "format": "epoch_millis"
+                    }
+                }
+            }
+
+        ]
+        r = requests.post(url, headers=JSON_HEADER,
+                          data=json.dumps(query), timeout=(30, 300))
+        if 200 == r.status_code:
+            r_json = r.json()
+            # print r_json
+            arr_device_id = [device['key']
+                             for device in r_json['aggregations']['uniq_device']['buckets']]
+            devices = list(set(arr_device_id).union(set(devices)))
+        else:
+            print "request applog index failed, status_code:%d, reason:%s" % (
+                r.status_code, r.reason)
+            return []
+    return devices
 
 
 def create_remain_index():
@@ -144,21 +159,21 @@ def set_remain_rate(key, rate, new_device_num):
 if __name__ == '__main__':
     # create_remain_index()
     # set_remain_rate(5, 0.19, 68678)
-    yud = uniq_device(URL_ELASTICSEARCH_APPLOG, get_query_device(-1))
-    nd1day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(-2))
-    nd2day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(-3))
-    nd3day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(-4))
-    nd4day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(-5))
-    nd5day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(-6))
-    nd6day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(-7))
-    nd7day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(-8))
-    nd14day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(-15))
-    nd30day = uniq_device(URL_ELASTICSEARCH_DEVICE, get_query_device(-31))
+    yud = uniq_device_1day(URL_ELASTICSEARCH_APPLOG, get_query_device(), -1)
+    nd1day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -2)
+    nd2day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -3)
+    nd3day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -4)
+    nd4day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -5)
+    nd5day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -6)
+    nd6day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -7)
+    nd7day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -8)
+    nd14day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -15)
+    nd30day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -31)
 
     for key, nd in [(1, nd1day), (2, nd2day), (3, nd3day), (4, nd4day), (5, nd5day), (6, nd6day), (7, nd7day), (14, nd14day), (30, nd30day)]:
         ret = list(set(nd).intersection(set(yud)))
         if 0 == len(nd):
             continue
         rate = len(ret)/float(len(nd))
-        print key, rate, len(nd)
+        print key, rate, len(nd), len(ret), len(yud)
         set_remain_rate(key, rate, len(nd))
