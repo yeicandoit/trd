@@ -50,8 +50,7 @@ REMAIN_MAPPING = {
 }
 
 
-def get_query_user(ndays):
-    ndays_ago = time_tool.get_weehours_of_someday(ndays)
+def get_query_user():
     search_data = {
         "size": 0,
         "aggs": {
@@ -69,8 +68,8 @@ def get_query_user(ndays):
                     {
                         "range": {
                             "@timestamp": {
-                                "gte": ndays_ago * 1000,
-                                "lte": (ndays_ago + 86400) * 1000 - 1,
+                                "gte": 0,
+                                "lte": 0,
                                 "format": "epoch_millis"
                             }
                         }
@@ -92,19 +91,35 @@ def get_query_user(ndays):
     return search_data
 
 
-def uniq_user(url="", query={}):
-    r = requests.post(url, headers=JSON_HEADER,
-                      data=json.dumps(query), timeout=(30, 60))
-    if 200 == r.status_code:
-        r_json = r.json()
-        # print r_json
-        arr_user_id = [user['key']
-                         for user in r_json['aggregations']['uniq_user']['buckets']]
-        return arr_user_id
-    else:
-        print "request applog index failed, status_code:%d, reason:%s" % (
-            r.status_code, r.reason)
-        return 1
+def uniq_user_1day(url="", query={}, nday=1):
+    start = time_tool.get_weehours_of_someday(nday)
+    users = []
+    for i in range(24):
+        query["query"]["bool"]["must"] = [
+            {
+                "range": {
+                    "@timestamp": {
+                        "gte": (start + i * 3600) * 1000,
+                        "lte": (start + (i + 1) * 3600) * 1000 - 1,
+                        "format": "epoch_millis"
+                    }
+                }
+            }
+
+        ]
+        r = requests.post(url, headers=JSON_HEADER,
+                          data=json.dumps(query), timeout=(30, 60))
+        if 200 == r.status_code:
+            r_json = r.json()
+            # print r_json
+            arr_user_id = [user['key']
+                             for user in r_json['aggregations']['uniq_user']['buckets']]
+            users = list(set(arr_user_id).union(set(users)))
+        else:
+            print "request applog index failed, status_code:%d, reason:%s" % (
+                r.status_code, r.reason)
+            return []
+    return users
 
 
 def create_remain_index():
@@ -140,16 +155,16 @@ def set_remain_rate(key, rate, new_user_num):
 
 if __name__ == '__main__':
     # create_remain_index()
-    yud = uniq_user(URL_ELASTICSEARCH_APPLOG, get_query_user(-1))
-    nd1day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(-2))
-    nd2day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(-3))
-    nd3day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(-4))
-    nd4day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(-5))
-    nd5day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(-6))
-    nd6day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(-7))
-    nd7day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(-8))
-    nd14day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(-15))
-    nd30day = uniq_user(URL_ELASTICSEARCH_USER, get_query_user(-31))
+    yud = uniq_user_1day(URL_ELASTICSEARCH_APPLOG, get_query_user(), -1)
+    nd1day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -2)
+    nd2day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -3)
+    nd3day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -4)
+    nd4day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -5)
+    nd5day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -6)
+    nd6day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -7)
+    nd7day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -8)
+    nd14day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -15)
+    nd30day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -31)
 
     for key, nd in [(1, nd1day), (2, nd2day), (3, nd3day), (4, nd4day), (5, nd5day), (6, nd6day), (7, nd7day), (14, nd14day), (30, nd30day)]:
         ret = list(set(nd).intersection(set(yud)))
