@@ -45,6 +45,14 @@ def get_device(duration=900):
                 "terms": {
                     "field": "device_id.keyword",
                     "size": 1000000000
+                },
+                "aggs": {
+                    "unique_channel": {
+                        "terms": {
+                            "field": "channel.keyword",
+                            "size": 2
+                        }
+                    }
                 }
             }
         }
@@ -55,11 +63,16 @@ def get_device(duration=900):
     if 200 == r.status_code:
         r_json = r.json()
         # logger.debug(r.json())
-        arr_device_id = [device['key']
-                         for device in r_json['aggregations']['unique_device']['buckets']]
-        logger.debug(arr_device_id)
-        logger.debug(len(arr_device_id))
-        return arr_device_id
+        hash_device_ids = {}
+        for device in r_json['aggregations']['unique_device']['buckets']:
+            hash_device_ids[device['key']] = 'unkown'
+            for channel in device['unique_channel']['buckets']:
+                if '' != channel['key']:
+                    hash_device_ids[device['key']] = channel['key']
+                    break
+        logger.debug(hash_device_ids)
+        logger.debug(len(hash_device_ids.keys()))
+        return hash_device_ids
     else:
         logger.error("request applog-%s index failed, status_code:%d, reason:%s",
                      time.strftime("%Y.%m.%d"), r.status_code, r.reason)
@@ -105,21 +118,24 @@ def get_new_device(arr_device_id=[]):
     return new_device_ids
 
 
-def add_new_device(new_device_ids=[]):
+def add_new_device(new_device_ids=[], hash_device_ids={}):
     device_data = {
         "device_id": "",
-        "@timestamp": ""
+        "@timestamp": "",
+        "channel": ""
     }
     for device_id in new_device_ids:
         device_data["device_id"] = device_id
         device_data['@timestamp'] = datetime.datetime.today(
         ).isoformat() + "+08:00"
+        device_data["channel"] = hash_device_ids[device_id] if device_id in hash_device_ids.keys(
+        ) else "unkown"
         logger.info(device_data)
         requests.post(URL_ELASTICSEARCH_DEVICE_ADD, headers=JSON_HEADER,
                       data=json.dumps(device_data), timeout=(10, 20))
 
 
 if __name__ == '__main__':
-    device_ids = get_device()
-    new_device_ids = get_new_device(device_ids)
-    add_new_device(new_device_ids)
+    hash_device_ids = get_device()
+    new_device_ids = get_new_device(hash_device_ids.keys())
+    add_new_device(new_device_ids, hash_device_ids)
