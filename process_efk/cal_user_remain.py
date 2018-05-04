@@ -128,9 +128,9 @@ def create_remain_index():
                   headers=JSON_HEADER, data=json.dumps(REMAIN_MAPPING), timeout=(10, 20))
 
 
-def set_remain_rate(key, rate, new_user_num):
+def set_remain_rate(key, rate, new_user_num, someday):
     remain_rate_key = "user_remain_rate_%dd" % key
-    dt = datetime.today() - timedelta(key+1)
+    dt = datetime.today() - timedelta(key+1+someday)
     _id = dt.strftime('%Y-%m-%d')
     url = URL_ELASTICSEARCH_REMAIN_ID % _id
     timestamp = dt.isoformat() + "+08:00"
@@ -155,16 +155,17 @@ def set_remain_rate(key, rate, new_user_num):
 
 if __name__ == '__main__':
     # create_remain_index()
-    yud = uniq_user_1day(URL_ELASTICSEARCH_APPLOG, get_query_user(), -1)
-    nd1day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -2)
-    nd2day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -3)
-    nd3day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -4)
-    nd4day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -5)
-    nd5day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -6)
-    nd6day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -7)
-    nd7day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -8)
-    nd14day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -15)
-    nd30day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -31)
+    d = 0
+    yud = uniq_user_1day(URL_ELASTICSEARCH_APPLOG, get_query_user(), -(d+1))
+    nd1day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -(d+2))
+    nd2day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -(d+3))
+    nd3day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -(d+4))
+    nd4day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -(d+5))
+    nd5day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -(d+6))
+    nd6day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -(d+7))
+    nd7day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -(d+8))
+    nd14day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -(d+15))
+    nd30day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -(d+31))
 
     for key, nd in [(1, nd1day), (2, nd2day), (3, nd3day), (4, nd4day), (5, nd5day), (6, nd6day), (7, nd7day), (14, nd14day), (30, nd30day)]:
         ret = list(set(nd).intersection(set(yud)))
@@ -172,4 +173,4 @@ if __name__ == '__main__':
             continue
         rate = len(ret)/float(len(nd))
         print key, rate, len(nd)
-        set_remain_rate(key, rate, len(nd))
+        set_remain_rate(key, rate, len(nd), d)
