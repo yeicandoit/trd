@@ -131,9 +131,9 @@ def create_remain_index():
                   headers=JSON_HEADER, data=json.dumps(REMAIN_MAPPING), timeout=(10, 20))
 
 
-def set_remain_rate(key, rate, new_device_num):
+def set_remain_rate(key, rate, new_device_num, someday):
     remain_rate_key = "remain_rate_%dd" % key
-    dt = datetime.today() - timedelta(key+1)
+    dt = datetime.today() - timedelta(key+1+someday)
     _id = dt.strftime('%Y-%m-%d')
     url = URL_ELASTICSEARCH_REMAIN_ID % _id
     timestamp = dt.isoformat() + "+08:00"
@@ -159,16 +159,17 @@ def set_remain_rate(key, rate, new_device_num):
 if __name__ == '__main__':
     # create_remain_index()
     # set_remain_rate(5, 0.19, 68678)
-    yud = uniq_device_1day(URL_ELASTICSEARCH_APPLOG, get_query_device(), -1)
-    nd1day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -2)
-    nd2day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -3)
-    nd3day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -4)
-    nd4day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -5)
-    nd5day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -6)
-    nd6day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -7)
-    nd7day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -8)
-    nd14day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -15)
-    nd30day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -31)
+    d = 0
+    yud = uniq_device_1day(URL_ELASTICSEARCH_APPLOG, get_query_device(), -(d+1))
+    nd1day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -(d+2))
+    nd2day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -(d+3))
+    nd3day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -(d+4))
+    nd4day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -(d+5))
+    nd5day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -(d+6))
+    nd6day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -(d+7))
+    nd7day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -(d+8))
+    nd14day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -(d+15))
+    nd30day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -(d+31))
 
     for key, nd in [(1, nd1day), (2, nd2day), (3, nd3day), (4, nd4day), (5, nd5day), (6, nd6day), (7, nd7day), (14, nd14day), (30, nd30day)]:
         ret = list(set(nd).intersection(set(yud)))
@@ -176,4 +177,4 @@ if __name__ == '__main__':
             continue
         rate = len(ret)/float(len(nd))
         print key, rate, len(nd), len(ret), len(yud)
-        set_remain_rate(key, rate, len(nd))
+        set_remain_rate(key, rate, len(nd), d)
