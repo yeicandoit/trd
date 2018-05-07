@@ -19,6 +19,10 @@ REMAIN_MAPPING = {
         "@timestamp": {
             "type": "date"
         },
+        "channel": {
+            "ignore_above": 256,
+            "type": "keyword"
+        },
         "new_device_num": {
             "type": "long"
         },
@@ -156,10 +160,7 @@ def set_remain_rate(key, rate, new_device_num, someday):
                       data=json.dumps(data), timeout=(10, 20))
 
 
-if __name__ == '__main__':
-    # create_remain_index()
-    # set_remain_rate(5, 0.19, 68678)
-    d = 0
+def update_rate(d=0):
     yud = uniq_device_1day(URL_ELASTICSEARCH_APPLOG, get_query_device(), -(d+1))
     nd1day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -(d+2))
     nd2day = uniq_device_1day(URL_ELASTICSEARCH_DEVICE, get_query_device(), -(d+3))
@@ -178,3 +179,7 @@ if __name__ == '__main__':
         rate = len(ret)/float(len(nd))
         print key, rate, len(nd), len(ret), len(yud)
         set_remain_rate(key, rate, len(nd), d)
+
+
+if __name__ == '__main__':
+    update_rate()
