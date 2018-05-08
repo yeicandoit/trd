@@ -44,3 +44,13 @@ type Batchlog struct {
 	Token  string `json:"token"`
 	UserId int    `json:"user_id"`
 }
+
+type SingleUserlog struct {
+	UserId       int    `json:"user_id"`
+	RegisteredAt int    `json:"registered_at"`
+	Channel      string `json:"channel"`
+}
+
+type Userlog struct {
+	MultiUserlog []*SingleUserlog
+}

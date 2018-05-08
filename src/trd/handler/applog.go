@@ -179,6 +179,48 @@ func BatchlogHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func UserlogHandler(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		if err := recover(); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			b := make([]byte, 1<<16)
+			n := runtime.Stack(b, false)
+			// filebeat could not parse this log
+			// util.Log.Error("{\"error\":\"%s\"}", b[:n])
+			w.Write(b[:n])
+		}
+	}()
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		util.Log.Error("{\"error\":\"user log request:%s\"}", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("user log request:" + err.Error()))
+		return
+	}
+	if !strings.Contains(r.Header.Get("Content-Type"), "application/json") {
+		util.Log.Error("{\"error\":\"Content-Type is not application/json:%s\"}", r.Header.Get("Content-Type"))
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Content-Type is not jpplication/son:" + r.Header.Get("Content-Type")))
+		return
+	}
+	defer r.Body.Close()
+	userlog := &proto.Userlog{}
+	if err := json.Unmarshal(body, userlog); err != nil {
+		util.Log.Error("{\"error\":\"json unmarshal:%s %s\"}", err.Error(), string(body))
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("json unmarshal:" + err.Error()))
+		return
+	}
+	util.Log.Debug("userlog:%+v", userlog)
+	for _, sulog := range userlog.MultiUserlog {
+		tm := time.Unix(int64(sulog.RegisteredAt), 0)
+		util.UserLog.Info("{\"@timestamp\":\"%s\",\"user_id\":\"%d\", \"channel\":\"%s\"}",
+			tm.Format("2006-01-02T15:04:05.000+08:00"), sulog.UserId, sulog.Channel)
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func str2bool(i string) bool {
 	if "1" == i {
 		return true

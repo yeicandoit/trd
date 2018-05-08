@@ -13,9 +13,11 @@ import (
 const ServiceConfigFile = "conf/trd.yaml"
 
 var Log l4g.Logger
+var UserLog l4g.Logger
 
 var ServiceConfig struct {
 	ServerLogConfigFile string
+	UserLogConfigFile   string
 }
 
 var (
@@ -47,5 +49,6 @@ func init() {
 	}
 
 	Log = devkit.NewLogger(devkit.GetAbsPath(ServiceConfig.ServerLogConfigFile, rootPath))
+	UserLog = devkit.NewLogger(devkit.GetAbsPath(ServiceConfig.UserLogConfigFile, rootPath))
 	Log.Info("{\"info\":\"app log server config: %+v\"}", ServiceConfig)
 }
