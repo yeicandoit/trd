@@ -14,6 +14,7 @@ func main() {
 	port := strconv.Itoa(util.TrdServerPort)
 	http.HandleFunc("/batchlog", handler.BatchlogHandler)
 	http.HandleFunc("/applog", handler.ApplogHandler)
+	http.HandleFunc("/userlog", handler.UserlogHandler)
 	util.Log.Info("{\"info\":\"trd app log server starts listen :%s\"}", port)
 	err := http.ListenAndServe(":"+port, nil)
 	util.Log.Info("{\"info\":%v}", err)

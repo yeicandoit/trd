@@ -204,18 +204,18 @@ func UserlogHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
-	userlog := &proto.Userlog{}
-	if err := json.Unmarshal(body, userlog); err != nil {
+	userlog := make([]proto.Userlog, 0)
+	if err := json.Unmarshal(body, &userlog); err != nil {
 		util.Log.Error("{\"error\":\"json unmarshal:%s %s\"}", err.Error(), string(body))
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("json unmarshal:" + err.Error()))
 		return
 	}
 	util.Log.Debug("userlog:%+v", userlog)
-	for _, sulog := range userlog.MultiUserlog {
-		tm := time.Unix(int64(sulog.RegisteredAt), 0)
+	for _, ulog := range userlog {
+		tm := time.Unix(int64(ulog.RegisteredAt), 0)
 		util.UserLog.Info("{\"@timestamp\":\"%s\",\"user_id\":\"%d\", \"channel\":\"%s\"}",
-			tm.Format("2006-01-02T15:04:05.000+08:00"), sulog.UserId, sulog.Channel)
+			tm.Format("2006-01-02T15:04:05.000+08:00"), ulog.UserId, ulog.Channel)
 	}
 
 	w.WriteHeader(http.StatusOK)
