@@ -5,7 +5,7 @@
         <level>DEBUG</level><!-- (FINEST|FINE|DEBUG|TRACE|INFO|WARNING|ERROR) -->
     </filter>
     <filter enabled="true">
-        <tag>trd</tag>
+        <tag>user</tag>
         <type>file</type>
         <level>INFO</level>
         <property name="filename">./log/user.log</property>

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 	"trd/proto"
+	"trd/queue"
 	"trd/util"
 )
 
@@ -213,9 +214,15 @@ func UserlogHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	util.Log.Debug("userlog:%+v", userlog)
 	for _, ulog := range userlog {
+		ulogp := &proto.UserlogPush{}
 		tm := time.Unix(int64(ulog.RegisteredAt), 0)
+		timestamp := tm.Format("2006-01-02T15:04:05.000+08:00")
+		ulogp.UserId = strconv.Itoa(ulog.UserId)
+		ulogp.Timestamp = timestamp
+		ulogp.Channel = ulog.Channel
+		queue.PutInDiskQueue(ulogp)
 		util.UserLog.Info("{\"@timestamp\":\"%s\",\"user_id\":\"%d\", \"channel\":\"%s\"}",
-			tm.Format("2006-01-02T15:04:05.000+08:00"), ulog.UserId, ulog.Channel)
+			timestamp, ulog.UserId, ulog.Channel)
 	}
 
 	w.WriteHeader(http.StatusOK)

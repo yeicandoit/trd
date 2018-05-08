@@ -1,2 +1,5 @@
 serverlogconfigfile: conf/prod/log/trd.xml
 userlogconfigfile: conf/prod/log/user.xml
+normlogconfigfile: conf/prod/log/norm.xml
+userlogqueuepath: data/
+esurl: "http://127.0.0.1:9200/user/doc/"

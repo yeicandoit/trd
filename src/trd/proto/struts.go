@@ -50,3 +50,9 @@ type Userlog struct {
 	RegisteredAt int    `json:"registered_at"`
 	Channel      string `json:"channel"`
 }
+
+type UserlogPush struct {
+	UserId    string `json:"user_id"`
+	Timestamp string `json:"@timestamp"`
+	Channel   string `json:"channel"`
+}

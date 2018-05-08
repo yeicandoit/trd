@@ -4,6 +4,7 @@ import (
 	"flag"
 	"path/filepath"
 	"time"
+	"trd/queue"
 	"tripod/devkit"
 	"tripod/zconf"
 
@@ -14,10 +15,14 @@ const ServiceConfigFile = "conf/trd.yaml"
 
 var Log l4g.Logger
 var UserLog l4g.Logger
+var NormLog l4g.Logger
 
 var ServiceConfig struct {
 	ServerLogConfigFile string
 	UserLogConfigFile   string
+	NormLogConfigFile   string
+	UserlogQueuePath    string
+	EsUrl               string
 }
 
 var (
@@ -50,5 +55,7 @@ func init() {
 
 	Log = devkit.NewLogger(devkit.GetAbsPath(ServiceConfig.ServerLogConfigFile, rootPath))
 	UserLog = devkit.NewLogger(devkit.GetAbsPath(ServiceConfig.UserLogConfigFile, rootPath))
+	NormLog = devkit.NewLogger(devkit.GetAbsPath(ServiceConfig.NormLogConfigFile, rootPath))
+	queue.InitUlQueue("userlog", ServiceConfig.UserlogQueuePath, NormLog, ServiceConfig.EsUrl)
 	Log.Info("{\"info\":\"app log server config: %+v\"}", ServiceConfig)
 }
