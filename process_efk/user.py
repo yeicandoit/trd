@@ -1,10 +1,18 @@
 import datetime
+import requests
+import json
 
 if __name__ == '__main__':
-    with open('user.csv', 'r') as f:
+    with open('userlog.csv', 'r') as f:
         for line in f.readlines():
-            user_id, first_time = line.strip().split(',')
-            timestamp = datetime.datetime.strptime(first_time,'%Y-%m-%d %H:%M:%S').isoformat()
-            print '{"user_id":"%s", "@timestamp":"%s"}' %(user_id, 
-							  timestamp+"+08:00")
-
+            user_id, registered_at, channel = line.strip().split(',')
+            userlog = [{
+                "user_id": int(user_id),
+                "registered_at": int(registered_at),
+                "channel": channel
+            }]
+            url = "http://127.0.0.1:9010/userlog"
+            headers = {"Content-Type": "application/json"}
+            r = requests.post(url, headers=headers, data=json.dumps(userlog), timeout=(10,10))
+            if 200 != r.status_code:
+                print userlog, r.reason

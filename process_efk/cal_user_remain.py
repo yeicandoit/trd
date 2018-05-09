@@ -24,25 +24,25 @@ REMAIN_MAPPING = {
         },
         "user_remain_rate_2d": {
             "type": "float"
-            },
+        },
         "user_remain_rate_3d": {
             "type": "float"
-            },
+        },
         "user_remain_rate_4d": {
             "type": "float"
-            },
+        },
         "user_remain_rate_5d": {
             "type": "float"
-            },
+        },
         "user_remain_rate_6d": {
             "type": "float"
-            },
+        },
         "user_remain_rate_7d": {
             "type": "float"
-            },
+        },
         "user_remain_rate_14d": {
             "type": "float"
-            },
+        },
         "user_remain_rate_30d": {
             "type": "float"
         },
@@ -91,6 +91,12 @@ def get_query_user():
     return search_data
 
 
+def get_query_user_1():
+    search_data = get_query_user()
+    search_data["aggs"]["uniq_user"]["terms"]["field"] = "user_id"
+    return search_data
+
+
 def uniq_user_1day(url="", query={}, nday=1):
     start = time_tool.get_weehours_of_someday(nday)
     users = []
@@ -113,7 +119,7 @@ def uniq_user_1day(url="", query={}, nday=1):
             r_json = r.json()
             # print r_json
             arr_user_id = [user['key']
-                             for user in r_json['aggregations']['uniq_user']['buckets']]
+                           for user in r_json['aggregations']['uniq_user']['buckets']]
             users = list(set(arr_user_id).union(set(users)))
         else:
             print "request applog index failed, status_code:%d, reason:%s" % (
@@ -153,19 +159,17 @@ def set_remain_rate(key, rate, new_user_num, someday):
                       data=json.dumps(data), timeout=(10, 20))
 
 
-if __name__ == '__main__':
-    # create_remain_index()
-    d = 0
+def update_rate(d=0):
     yud = uniq_user_1day(URL_ELASTICSEARCH_APPLOG, get_query_user(), -(d+1))
-    nd1day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -(d+2))
-    nd2day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -(d+3))
-    nd3day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -(d+4))
-    nd4day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -(d+5))
-    nd5day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -(d+6))
-    nd6day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -(d+7))
-    nd7day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -(d+8))
-    nd14day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -(d+15))
-    nd30day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user(), -(d+31))
+    nd1day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user_1(), -(d+2))
+    nd2day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user_1(), -(d+3))
+    nd3day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user_1(), -(d+4))
+    nd4day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user_1(), -(d+5))
+    nd5day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user_1(), -(d+6))
+    nd6day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user_1(), -(d+7))
+    nd7day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user_1(), -(d+8))
+    nd14day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user_1(), -(d+15))
+    nd30day = uniq_user_1day(URL_ELASTICSEARCH_USER, get_query_user_1(), -(d+31))
 
     for key, nd in [(1, nd1day), (2, nd2day), (3, nd3day), (4, nd4day), (5, nd5day), (6, nd6day), (7, nd7day), (14, nd14day), (30, nd30day)]:
         ret = list(set(nd).intersection(set(yud)))
@@ -174,3 +178,8 @@ if __name__ == '__main__':
         rate = len(ret)/float(len(nd))
         print key, rate, len(nd)
         set_remain_rate(key, rate, len(nd), d)
+
+
+if __name__ == '__main__':
+    # create_remain_index()
+    update_rate()
