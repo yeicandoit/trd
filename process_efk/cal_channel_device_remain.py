@@ -130,8 +130,8 @@ def set_channel_device_remain_rate(key, channel, rate, new_device_num, someday):
 
 
 def set_remain_rate(d=0):
-    yud = uniq_channel_device_1day(
-        cr.URL_ELASTICSEARCH_APPLOG, get_query_device(), -(d+1))
+    yud = cr.uniq_device_1day(
+        cr.URL_ELASTICSEARCH_APPLOG, cr.get_query_device(), -(d+1))
     nd1day = uniq_channel_device_1day(
         cr.URL_ELASTICSEARCH_DEVICE, get_query_device_1(), -(d+2))
     nd2day = uniq_channel_device_1day(
@@ -153,16 +153,13 @@ def set_remain_rate(d=0):
 
     for key, nd in [(1, nd1day), (2, nd2day), (3, nd3day), (4, nd4day), (5, nd5day), (6, nd6day), (7, nd7day), (14, nd14day), (30, nd30day)]:
         for channel in nd:
-            if channel not in yud.keys():
-                print "%s not in yud' keys" % (channel)
-                continue
             if 0 == len(nd[channel]):
                 print "nd%dday[%s]' lenght is zero" % (key, channel)
                 continue
-            ret = list(set(nd[channel]).intersection(set(yud[channel])))
+            ret = list(set(nd[channel]).intersection(set(yud)))
             rate = len(ret)/float(len(nd[channel]))
             print key, rate, len(ret), len(
-                nd[channel]), len(yud[channel]), channel
+                nd[channel]), len(yud), channel
             set_channel_device_remain_rate(
                 key, channel, rate, len(nd[channel]), d)
 
