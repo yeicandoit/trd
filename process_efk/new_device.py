@@ -51,6 +51,14 @@ def get_device(duration=900):
                         "terms": {
                             "field": "channel.keyword",
                             "size": 2
+                        },
+                        "aggs": {
+                            "timestamp": {
+                                "terms": {
+                                    "field": "@timestamp",
+                                    "size": 1
+                                }
+                            }
                         }
                     }
                 }
@@ -65,10 +73,15 @@ def get_device(duration=900):
         # logger.debug(r.json())
         hash_device_ids = {}
         for device in r_json['aggregations']['unique_device']['buckets']:
-            hash_device_ids[device['key']] = 'unkown'
+            hash_device_ids[device['key']] = {}
+            hash_device_ids[device['key']]["channel"] = 'unkown'
+            hash_device_ids[device['key']]["timestamp"] = datetime.datetime.today(
+            ).isoformat() + "+08:00"
             for channel in device['unique_channel']['buckets']:
                 if '' != channel['key']:
-                    hash_device_ids[device['key']] = channel['key']
+                    hash_device_ids[device['key']]["channel"] = channel['key']
+                    hash_device_ids[device['key']
+                                    ]["timestamp"] = channel['timestamp']['buckets'][0]['key_as_string']
                     break
         logger.debug(hash_device_ids)
         logger.debug(len(hash_device_ids.keys()))
@@ -126,9 +139,8 @@ def add_new_device(new_device_ids=[], hash_device_ids={}):
     }
     for device_id in new_device_ids:
         device_data["device_id"] = device_id
-        device_data['@timestamp'] = datetime.datetime.today(
-        ).isoformat() + "+08:00"
-        device_data["channel"] = hash_device_ids[device_id] if device_id in hash_device_ids.keys(
+        device_data['@timestamp'] = hash_device_ids[device_id]["timestamp"]
+        device_data["channel"] = hash_device_ids[device_id]['channel'] if device_id in hash_device_ids.keys(
         ) else "unkown"
         logger.info(device_data)
         requests.post(URL_ELASTICSEARCH_DEVICE_ADD, headers=JSON_HEADER,
