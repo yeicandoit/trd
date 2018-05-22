@@ -11,8 +11,8 @@ URL_ELASTICSEARCH_APP_STAY = "http://localhost:9200/app-stay/doc"
 JSON_HEADER = {"Content-Type": "application/json"}
 
 
-def get_query_use_time():
-    yesterday = time_tool.get_weehours_of_someday(-1)
+def get_query_use_time(nday):
+    yesterday = time_tool.get_weehours_of_someday(-nday)
     search_data = {
         "size": 0,
         "aggs": {
@@ -58,8 +58,8 @@ def get_query_use_time():
     return search_data
 
 
-def get_query_device():
-    yesterday = time_tool.get_weehours_of_someday(-1)
+def get_query_device(nday):
+    yesterday = time_tool.get_weehours_of_someday(-nday)
     search_data = {
         "size": 0,
         "aggs": {
@@ -164,22 +164,26 @@ def uniq_device(query={}):
         return 1
 
 
-def update_app_stay(app_stay_first=1, app_stay=1):
-    yesterday = datetime.today() - timedelta(1)
+def update_app_stay(app_stay_first=1, app_stay=1, someday=1):
+    dt = datetime.today() - timedelta(someday)
+    _id = dt.strftime('%Y-%m-%d')
     app_stay_data = {
-        "@timestamp": yesterday.isoformat() + "+08:00",
+        "@timestamp": dt.isoformat() + "+08:00",
         "app_stay": app_stay,
         "app_stay_first": app_stay_first
     }
-    requests.post(URL_ELASTICSEARCH_APP_STAY, headers=JSON_HEADER,
+    url = URL_ELASTICSEARCH_APP_STAY + "/" + _id
+    print app_stay_data
+    requests.post(url, headers=JSON_HEADER,
                   data=json.dumps(app_stay_data), timeout=(10, 20))
 
 
 if __name__ == '__main__':
-    query_sum_time = get_query_use_time()
-    query_device = get_query_device()
+    nday = 1
+    query_sum_time = get_query_use_time(nday)
+    query_device = get_query_device(nday)
     stf = sum_time_is_first(copy.deepcopy(query_sum_time))
     st = sum_time(copy.deepcopy(query_sum_time))
     udf = uniq_device_is_first(copy.deepcopy(query_device))
     ud = uniq_device(copy.deepcopy(query_device))
-    update_app_stay(int(stf/udf), int(st/ud))
+    update_app_stay(int(stf/udf), int(st/ud), nday)
