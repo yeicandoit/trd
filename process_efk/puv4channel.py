@@ -184,12 +184,10 @@ def process(query={}, query_uv={}, nday=1):
 
 
 if __name__ == '__main__':
-    for nday in range(42, 55):
-        if 0 == nday or 2 == nday:
-            continue
-        query = get_query()
-        query_uv = get_query_uv()
-        process(copy.deepcopy(query), copy.deepcopy(query_uv), nday)
-        query["aggs"]["pv"]["terms"]["field"] = "group.keyword"
-        query_uv["aggs"]["uv"]["terms"]["field"] = "group.keyword"
-        process(copy.deepcopy(query), copy.deepcopy(query_uv), nday)
+    nday = 1
+    query = get_query()
+    query_uv = get_query_uv()
+    process(copy.deepcopy(query), copy.deepcopy(query_uv), nday)
+    query["aggs"]["pv"]["terms"]["field"] = "group.keyword"
+    query_uv["aggs"]["uv"]["terms"]["field"] = "group.keyword"
+    process(copy.deepcopy(query), copy.deepcopy(query_uv), nday)
