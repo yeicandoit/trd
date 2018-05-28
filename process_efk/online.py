@@ -56,7 +56,6 @@ def get_user_device_count(query_online_user={}, nday=1):
                     }
                 }
             }
-
         ]
         r = requests.post(URL_ELASTICSEARCH_APPLOG, headers=JSON_HEADER,
                           data=json.dumps(query_online_user), timeout=(10, 20))
