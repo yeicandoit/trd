@@ -35,6 +35,34 @@ def get_query_per_channel():
     return query
 
 
+def get_query_user():
+    query = {
+        "size": 0,
+        "query": {
+            "bool": {
+                "must": []
+            }
+        },
+        "aggs": {
+            "per_channel": {
+                "terms": {
+                    "field": "channel",
+                    "size": 100000
+                },
+                "aggs": {
+                    "user_id": {
+                        "terms": {
+                            "field": "user_id",
+                            "size": 100000000
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return query
+
+
 def get_query_app_stay():
     query = {
         "size": 0,
@@ -46,13 +74,6 @@ def get_query_app_stay():
             }
         },
         "query": {
-            "constant_score": {
-                "filter": {
-                    "terms": {
-                        "user_id.keyword": []
-                    }
-                }
-            },
             "bool": {
                 "must": [
                     {
@@ -71,7 +92,12 @@ def get_query_app_stay():
                             }
                         }
                     }
-                ]
+                ],
+                "filter": {
+                    "terms": {
+                        "user_id.keyword": []
+                    }
+                }
             }
         }
     }
@@ -137,7 +163,7 @@ def get_new_device(query={}, nday=1):
     return data
 
 
-def get_app_stay(query={}, nday=1):
+def get_app_stay(query={}, query_user={}, nday=1):
     app_stay = {}
     app_stay_first = {}
     start = time_tool.get_weehours_of_someday(-nday)
@@ -151,30 +177,6 @@ def get_app_stay(query={}, nday=1):
         }
     }
 
-    query_user = {
-        "size": 0,
-        "query": {
-            "bool": {
-                "must": []
-            }
-        },
-        "aggs": {
-            "per_channel": {
-                "terms": {
-                    "field": "channel",
-                    "size": 100000
-                },
-                "aggs": {
-                    "user_id": {
-                        "terms": {
-                            "field": "user_id",
-                            "size": 100000000
-                        }
-                    }
-                }
-            }
-        }
-    }
     query_user["query"]["bool"]["must"] = [time_range]
     r = requests.post(URL_ELASTICSEARCH_USER, headers=JSON_HEADER,
                       data=json.dumps(query_user), timeout=(30, 60))
@@ -190,17 +192,38 @@ def get_app_stay(query={}, nday=1):
 
     query["query"]["bool"]["must"].append(time_range)
     for k, v in user_channel.items():
-        query["query"]["constant_score"]["filter"]["terms"]["user_id.keyword"] = v
-        print query
+        query["query"]["bool"]["filter"]["terms"]["user_id.keyword"] = v
         r = requests.post(URL_ELASTICSEARCH_APPLOG, headers=JSON_HEADER,
                           data=json.dumps(query), timeout=(30, 60))
         if 200 == r.status_code:
             r_json = r.json()
-            print k, r_json["aggregations"]["sum_time"]["value"]
+            if len(v) > 0:
+                app_stay[k] = r_json["aggregations"]["sum_time"]["value"] / \
+                    len(v)
         else:
             logger.error("request user index failed, status_code:%d, reason:%s",
                          r.status_code, r.reason)
-        break
+    query_is_first = {
+        "match_phrase": {
+            "is_first": {
+                "query": "true"
+            }
+        }
+    }
+    query["query"]["bool"]["must"].append(query_is_first)
+    for k, v in user_channel.items():
+        query["query"]["bool"]["filter"]["terms"]["user_id.keyword"] = v
+        r = requests.post(URL_ELASTICSEARCH_APPLOG, headers=JSON_HEADER,
+                          data=json.dumps(query), timeout=(30, 60))
+        if 200 == r.status_code:
+            r_json = r.json()
+            if len(v) > 0:
+                app_stay_first[k] = r_json["aggregations"]["sum_time"]["value"] / \
+                    len(v)
+        else:
+            logger.error("request user index failed, status_code:%d, reason:%s",
+                         r.status_code, r.reason)
+    return app_stay, app_stay_first
 
 
 def get_task(nday=1):
@@ -218,7 +241,7 @@ def get_reading(nday=1):
     data = {}
     day1 = time_tool.get_someday_str(-nday)
     day2 = time_tool.get_someday_str(-nday+1)
-    sql = "select us.channel as channel, count(nr.user_id) as count from users as u left join user_statistics as us on (u.id = us.user_id) right join news_effective_readings as nr on (u.id = nr.user_id) where u.registered_at >= \"%s\" and u.registered_at < \"%s\" and nr.created_at >= \"%s\" and nr.created_at < \"%s\" and nr.effective = 1  group by us.channel" % (day1, day2, day1, day2)
+    sql = "select us.channel as channel, count(nr.user_id) as count from users as u left join user_statistics as us on (u.id = us.user_id) right join news_effective_readings as nr on (u.id = nr.user_id) where u.registered_at >= \"%s\" and u.registered_at < \"%s\" and nr.created_at >= \"%s\" and nr.created_at < \"%s\" and nr.effective = 1 group by us.channel" % (day1, day2, day1, day2)
     rt = mysql_tool.querydb(sql)
     for v in rt:
         data[v[0]] = int(v[1])
@@ -254,6 +277,7 @@ def process(nday=1):
     user_per_channel = get_new_user(query=get_query_per_channel(), nday=nday)
     device_per_channel = get_new_device(
         query=get_query_per_channel(), nday=nday)
+    app_stay, app_stay_first = get_app_stay(get_query_app_stay(), get_query_user(), nday)
     mysql_tool.connectdb()
     task_per_channel = get_task(nday=nday)
     reading_per_channel = get_reading(nday=nday)
@@ -265,19 +289,25 @@ def process(nday=1):
         data = {}
         data["channel"] = k
         data["@timestamp"] = time_tool.get_someday_es_format(-nday)
+        data["num_user"] = v
         if k in device_per_channel.keys():
             data["num_device"] = device_per_channel[k]
-        data["num_user"] = v
         if k in task_per_channel.keys():
             data["num_task"] = task_per_channel[k]
-            data["num_task_average"] = task_per_channel[k] / float(v)
+            if v > 0:
+                data["num_task_average"] = task_per_channel[k] / float(v)
         if k in reading_per_channel.keys():
             data["num_read"] = reading_per_channel[k]
-            data["num_read_average"] = reading_per_channel[k] / float(v)
+            if v > 0:
+                data["num_read_average"] = reading_per_channel[k] / float(v)
         if k in video_per_channel.keys():
             data["num_video"] = video_per_channel[k]
         if k in child_per_channel.keys():
             data["num_child"] = child_per_channel[k]
+        if k in app_stay.keys():
+            data["app_stay"] = int(app_stay[k])
+        if k in app_stay_first.keys():
+            data["app_stay_first"] = int(app_stay_first[k])
         url = URL_ELASTICSEARCH_NEW_USER_INFO + "/" + \
             time_tool.get_someday_str(-nday) + "_" + k
         r = requests.post(url, headers=JSON_HEADER,
@@ -288,7 +318,4 @@ def process(nday=1):
 
 
 if __name__ == '__main__':
-    # print get_reading()
-    for n in range(1, 8):
-        process(n)
-    # get_app_stay(get_query_app_stay())
+    process(n)
