@@ -1,3 +1,4 @@
+import time
 import pymysql
 
 
@@ -19,13 +20,17 @@ def closedb():
     print "DB is closed"
 
 
-def querydb(sql="show tables"):
+def querydb(sql="show tables", logger=None, message=""):
     if db is None:
         connectdb()
     cursor = db.cursor()
     try:
+        timestamp = int(time.time())
         cursor.execute(sql)
         results = cursor.fetchall()
+        timestamp_ = int(time.time())
+        if logger is not None:
+            logger.info("%s took %d second", message, timestamp_ - timestamp)
         return results
     except:
         print "Error: unable to fecth data"
