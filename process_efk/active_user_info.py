@@ -12,7 +12,7 @@ URL_ELASTICSEARCH_DEVICE = "http://localhost:9200/device/doc/_search"
 URL_ELASTICSEARCH_ACTIVE_USER_INFO = "http://localhost:9200/active_user_info/doc"
 JSON_HEADER = {"Content-Type": "application/json"}
 
-# Add mapping: curl -H "Content-Type:application/json" -XPOST  http://127.0.0.1:9200/active_user_info/doc/_mapping -d '{"properties": {"channel":{"type":"keyword"}, "@timestamp":{"type":"date"}, "num_device":{"type":"long"},"num_user":{"type":"long"}, "num_task_average":{"type":"float"}, "num_read":{"type":"long"}, "num_video":{"type":"long"}, "num_read_average":{"type":"float"}, "app_stay_first":{"type":"long"}, "app_stay":{"type":"long"}, "num_child":{"type":"long"}}}'
+# Add mapping: curl -H "Content-Type:application/json" -XPOST  http://127.0.0.1:9200/active_user_info/doc/_mapping -d '{"properties": {"channel":{"type":"keyword"}, "@timestamp":{"type":"date"}, "num_device":{"type":"long"},"num_user":{"type":"long"}, "num_task_average":{"type":"float"}, "num_read":{"type":"long"}, "num_read_user":{"type":"long"} "num_video":{"type":"long"}, "num_read_average":{"type":"float"}, "app_stay_first":{"type":"long"}, "app_stay":{"type":"long"}, "num_child":{"type":"long"}}}'
 
 
 def get_query_app_stay():
@@ -441,6 +441,7 @@ def process(nday=1):
         if k in reading_per_channel.keys():
             data["num_read"] = reading_per_channel[k]["num_read"]
             if reading_per_channel[k]["num_user"] > 0:
+                data["num_read_user"] = reading_per_channel[k]["num_user"]
                 data["num_read_average"] = reading_per_channel[k]["num_read"] / \
                     float(reading_per_channel[k]["num_user"])
         if k in video_per_channel.keys():
