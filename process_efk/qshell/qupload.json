@@ -1,8 +1,8 @@
 {
-    "src_dir"       : "/var/taoredian_elasticsearch",
+    "src_dir"       : "/var/taoredian_es_bk/replace",
     "bucket"        : "taozuiredian-data-report-log",
     "access_key"    : "fqNScu0j8tyWl2due8ZN87JT8mbngDB6-Mnia7nx",
     "secret_key"    : "CuMgOOWPp_z6Z9j6K5QF2KlaN-4CriXKB397oyI4",
-    "key_prefix"    : "taoredian_elasticsearch/",
+    "key_prefix"    : "replace/",
     "up_host"       : "http://upload.qiniu.com"
 }
