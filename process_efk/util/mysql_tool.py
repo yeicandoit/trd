@@ -34,7 +34,7 @@ def querydb(sql="show tables", logger=None, message=""):
         return results
     except:
         print "Error: unable to fecth data"
-        return {}
+        return []
 
 
 if __name__ == '__main__':
