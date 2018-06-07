@@ -16,18 +16,22 @@ JSON_HEADER = {"Content-Type": "application/json"}
 def get_active_parent(nday=1):
     data = {}
     user_arr = active_user_info.get_user_arr(nday)
-    sql = "select channel, count(distinct user_id) from user_statistics where user_id in (select distinct parent_id from users where id in (%s)) group by channel"
+    sql = "select channel, user_id from user_statistics where user_id in (select distinct parent_id from users where id in (%s))"
     for i in range(0, len(user_arr), 1000):
         user_to_sql = user_arr[i:i+1000]
         sql_use = sql % (",".join(user_to_sql))
         rt = mysql_tool.querydb(sql_use)
         for v in rt:
             if v[0] in data.keys():
-                data[v[0]] += int(v[1])
+                data[v[0]].append(v[1])
             else:
-                data[v[0]] = int(v[1])
+                data[v[0]] = []
+                data[v[0]].append(v[1])
+    active_parent = {}
+    for k, v in data.items():
+        active_parent[k] = len(list(set(data[k])))
 
-    return data
+    return active_parent
 
 
 def get_parent_info(nday=1):
@@ -35,7 +39,7 @@ def get_parent_info(nday=1):
     day1 = time_tool.get_someday_str(-nday)
     day2 = time_tool.get_someday_str(-nday+1)
 
-    sql_channel_count = "select us.channel, count(u.id) from users as u left join user_statistics as us on (u.id = us.user_id) where u.registered_at < \"%s\"group by us.channel" % day2
+    sql_channel_count = "select us.channel, count(u.id) from users as u left join user_statistics as us on (u.id = us.user_id) where u.registered_at < \"%s\" group by us.channel" % day2
     rt = mysql_tool.querydb(sql_channel_count, logger, sql_channel_count)
     for v in rt:
         if v[0] in data.keys():
