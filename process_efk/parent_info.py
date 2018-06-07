@@ -15,6 +15,7 @@ JSON_HEADER = {"Content-Type": "application/json"}
 
 def get_active_parent(nday=1):
     data = {}
+    all_parent = []
     user_arr = active_user_info.get_user_arr(nday)
     sql = "select channel, user_id from user_statistics where user_id in (select distinct parent_id from users where id in (%s))"
     for i in range(0, len(user_arr), 1000):
@@ -22,6 +23,7 @@ def get_active_parent(nday=1):
         sql_use = sql % (",".join(user_to_sql))
         rt = mysql_tool.querydb(sql_use)
         for v in rt:
+            all_parent.append(v[1])
             if v[0] in data.keys():
                 data[v[0]].append(v[1])
             else:
@@ -30,12 +32,14 @@ def get_active_parent(nday=1):
     active_parent = {}
     for k, v in data.items():
         active_parent[k] = len(list(set(data[k])))
+    active_parent["all_channel"] = len(list(set(all_parent)))
 
     return active_parent
 
 
 def get_parent_info(nday=1):
     data = {}
+    data["all_channel"] = {}
     day1 = time_tool.get_someday_str(-nday)
     day2 = time_tool.get_someday_str(-nday+1)
 
@@ -47,6 +51,9 @@ def get_parent_info(nday=1):
         else:
             data[v[0]] = {}
             data[v[0]]['num_user'] = int(v[1])
+    sql_count = "select count(*) from users where registered_at < \"%s\"" % day2
+    rt = mysql_tool.querydb(sql_count, logger, sql_count)
+    data["all_channel"]['num_user'] = int(rt[0][0])
 
     sql_channel_parent_count = "select channel, count(distinct user_id) from user_statistics where user_id in (select distinct parent_id from users where registered_at < \"%s\") group by channel" % day2
     rt = mysql_tool.querydb(sql_channel_parent_count,
@@ -57,6 +64,9 @@ def get_parent_info(nday=1):
         else:
             data[v[0]] = {}
             data[v[0]]['num_parent'] = int(v[1])
+    sql_parent_count = "select count(distinct parent_id) from users where registered_at < \"%s\"" % day2
+    rt = mysql_tool.querydb(sql_parent_count, logger, sql_parent_count)
+    data["all_channel"]['num_parent'] = int(rt[0][0])
 
     sql_channel_income = "select channel, sum(total_point_income) from user_statistics where user_id in (select distinct parent_id from users) group by channel"
     rt = mysql_tool.querydb(sql_channel_income, logger, sql_channel_income)
@@ -66,6 +76,9 @@ def get_parent_info(nday=1):
         else:
             data[v[0]] = {}
             data[v[0]]['total_income'] = int(v[1])
+    sql_income = "select sum(total_point_income) from user_statistics where user_id in (select distinct parent_id from users)"
+    rt = mysql_tool.querydb(sql_income, logger, sql_income)
+    data["all_channel"]['total_income'] = int(rt[0][0])
 
     sql_channel_rebate = "select channel, sum(child_point_rebate) from user_statistics where user_id in (select distinct parent_id from users) group by channel"
     rt = mysql_tool.querydb(sql_channel_rebate, logger, sql_channel_rebate)
@@ -75,6 +88,9 @@ def get_parent_info(nday=1):
         else:
             data[v[0]] = {}
             data[v[0]]['total_rebate'] = int(v[1])
+    sql_rebate = "select sum(child_point_rebate) from user_statistics where user_id in (select distinct parent_id from users)"
+    rt = mysql_tool.querydb(sql_rebate, logger, sql_rebate)
+    data["all_channel"]['total_rebate'] = int(rt[0][0])
 
     sql_channel_child_count = "select us.channel, count(u.id) from users as u join user_statistics as us on (u.id = us.user_id) where u.parent_id != 0 and u.registered_at < \"%s\" group by us.channel;" % day2
     rt = mysql_tool.querydb(sql_channel_child_count,
@@ -85,17 +101,22 @@ def get_parent_info(nday=1):
         else:
             data[v[0]] = {}
             data[v[0]]['num_child'] = int(v[1])
+    sql_child_count = "select count(*) from users where parent_id != 0  and registered_at < \"%s\"" % day2
+    rt = mysql_tool.querydb(sql_child_count,logger, sql_child_count)
+    data["all_channel"]['num_child'] = int(rt[0][0])
 
     sql_channel_new_child_count = "select us.channel, count(u.id) from users as u join user_statistics as us on (u.id = us.user_id) where u.parent_id != 0 and u.registered_at >= \"%s\" and u.registered_at < \"%s\" group by us.channel;" % (
         day1, day2)
-    rt = mysql_tool.querydb(sql_channel_new_child_count,
-                            logger, sql_channel_new_child_count)
+    rt = mysql_tool.querydb(sql_channel_new_child_count, logger, sql_channel_new_child_count)
     for v in rt:
         if v[0] in data.keys():
             data[v[0]]['num_new_child'] = int(v[1])
         else:
             data[v[0]] = {}
             data[v[0]]['num_new_child'] = int(v[1])
+    sql_new_child_count = "select count(*) from users where parent_id != 0 and registered_at >= \"%s\" and registered_at < \"%s\"" % (day1, day2)
+    rt = mysql_tool.querydb(sql_new_child_count, logger, sql_new_child_count)
+    data["all_channel"]['num_new_child'] = int(rt[0][0])
 
     active_parent = get_active_parent(nday)
     for k, v in data.items():
