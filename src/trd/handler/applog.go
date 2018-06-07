@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -15,6 +16,7 @@ import (
 )
 
 var logstr = "{\"@timestamp\":\"%s\", \"key\":\"%s\", \"group\":\"%s\", \"from\":\"%s\", \"channel\":\"%s\", \"index\":%d, \"news_id\":%d, \"category_id\":%d, \"category_index\":%d, \"task_key\":\"%s\", \"page\":%d, \"page_limit\":%d, \"use_time\":%d, \"udid\":\"%s\", \"device_id\":\"%s\", \"imei1\":\"%s\", \"imei2\":\"%s\", \"os\":\"%s\", \"os_version\":\"%s\", \"app_version\":\"%s\", \"app_version_code\":%d, \"model\":\"%s\", \"intranet_ip\":\"%s\", \"ip\":\"%s\", \"ssid\":\"%s\", \"network_type\":\"%s\", \"mac\":\"%s\", \"brand\":\"%s\", \"is_simulator\":\"%t\", \"device_feature\":\"%s\", \"ua\":\"%s\", \"token\":\"%s\", \"user_id\":\"%d\", \"is_first\":\"%t\"}"
+var logstr_optional = "{\"@timestamp\":\"%s\", \"key\":\"%s\", \"group\":\"%s\", \"from\":\"%s\", \"channel\":\"%s\", \"index\":%d, \"news_id\":%d, \"category_id\":%d, \"category_index\":%d, \"task_key\":\"%s\", \"page\":%d, \"page_limit\":%d, \"use_time\":%d, \"udid\":\"%s\", \"device_id\":\"%s\", \"imei1\":\"%s\", \"imei2\":\"%s\", \"os\":\"%s\", \"os_version\":\"%s\", \"app_version\":\"%s\", \"app_version_code\":%d, \"model\":\"%s\", \"intranet_ip\":\"%s\", \"ip\":\"%s\", \"ssid\":\"%s\", \"network_type\":\"%s\", \"mac\":\"%s\", \"brand\":\"%s\", \"is_simulator\":\"%t\", \"device_feature\":\"%s\", \"ua\":\"%s\", \"token\":\"%s\", \"user_id\":\"%d\", \"is_first\":\"%t\", \"custom_params\":\"%s\"}"
 
 func ApplogHandler(w http.ResponseWriter, r *http.Request) {
 	defer func() {
@@ -149,7 +151,7 @@ func BatchlogHandler(w http.ResponseWriter, r *http.Request) {
 	user_id := checkZero(batchlog.UserId)
 	is_first := str2bool(commonData[14])
 
-	for _, data := range rawData {
+	for j, data := range rawData {
 		data_decode, _ := url.QueryUnescape(data)
 		arrD := strings.Split(data_decode, ",")
 		for i, v := range arrD {
@@ -169,12 +171,27 @@ func BatchlogHandler(w http.ResponseWriter, r *http.Request) {
 		page := str2int(arrD[8])
 		page_limit := str2int(arrD[9])
 		use_time := str2int(arrD[10])
-		util.Log.Info(logstr, time.Now().Format("2006-01-02T15:04:05.000+08:00"),
-			key, group, from, channel, index, news_id, category_id,
-			category_index, task_key, page, page_limit, use_time, udid,
-			device_id, imei1, imei2, os, os_version, app_version,
-			app_version_code, model, intranet_ip, ip, ssid, network_type, mac,
-			brand, is_simulator, device_feature, ua, token, user_id, is_first)
+		now := time.Now()
+		ms, _ := time.ParseDuration(fmt.Sprintf("%dms", j))
+		now_ := now.Add(ms)
+		if 12 <= len(arrD) {
+			custom_params := arrD[11]
+			util.Log.Info(logstr_optional, now_.Format("2006-01-02T15:04:05.000+08:00"),
+				key, group, from, channel, index, news_id, category_id,
+				category_index, task_key, page, page_limit, use_time, udid,
+				device_id, imei1, imei2, os, os_version, app_version,
+				app_version_code, model, intranet_ip, ip, ssid, network_type, mac,
+				brand, is_simulator, device_feature, ua, token, user_id, is_first,
+				custom_params)
+
+		} else {
+			util.Log.Info(logstr, now_.Format("2006-01-02T15:04:05.000+08:00"),
+				key, group, from, channel, index, news_id, category_id,
+				category_index, task_key, page, page_limit, use_time, udid,
+				device_id, imei1, imei2, os, os_version, app_version,
+				app_version_code, model, intranet_ip, ip, ssid, network_type, mac,
+				brand, is_simulator, device_feature, ua, token, user_id, is_first)
+		}
 	}
 
 	w.WriteHeader(http.StatusOK)
