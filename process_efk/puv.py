@@ -63,7 +63,7 @@ def get_query(nday=1):
 
 def get_puv(query_puv={}):
     r = requests.post(URL_ELASTICSEARCH_APPLOG, headers=JSON_HEADER,
-                      data=json.dumps(query_puv), timeout=(10, 20))
+                      data=json.dumps(query_puv), timeout=(20, 50))
     puv = {}
     if 200 == r.status_code:
         r_json = r.json()
