@@ -34,6 +34,8 @@ type Applog struct {
 	Token          string `json:"token"`
 	UserId         int    `json:"user_id"`
 	IsFirst        bool   `json:"is_first"`
+	Battery        int32  `json:"battery"`
+	Idfa           string `json:"idfa"`
 }
 
 type Batchlog struct {
@@ -43,6 +45,7 @@ type Batchlog struct {
 	Ua     string `json:"ua"`
 	Token  string `json:"token"`
 	UserId int    `json:"user_id"`
+	System int32  `json:"system"`
 }
 
 type Userlog struct {

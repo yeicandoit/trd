@@ -4,3 +4,10 @@ log/
 src/github.com/
 src/tripod/
 src/trd/build.sh
+bin/
+pkg/
+src/helloconvey
+src/hellomock
+src/hellostub
+data
+process_efk/*.pyc

@@ -15,8 +15,10 @@ import (
 	"trd/util"
 )
 
-var logstr = "{\"@timestamp\":\"%s\", \"key\":\"%s\", \"group\":\"%s\", \"from\":\"%s\", \"channel\":\"%s\", \"index\":%d, \"news_id\":%d, \"category_id\":%d, \"category_index\":%d, \"task_key\":\"%s\", \"page\":%d, \"page_limit\":%d, \"use_time\":%d, \"udid\":\"%s\", \"device_id\":\"%s\", \"imei1\":\"%s\", \"imei2\":\"%s\", \"os\":\"%s\", \"os_version\":\"%s\", \"app_version\":\"%s\", \"app_version_code\":%d, \"model\":\"%s\", \"intranet_ip\":\"%s\", \"ip\":\"%s\", \"ssid\":\"%s\", \"network_type\":\"%s\", \"mac\":\"%s\", \"brand\":\"%s\", \"is_simulator\":\"%t\", \"device_feature\":\"%s\", \"ua\":\"%s\", \"token\":\"%s\", \"user_id\":\"%d\", \"is_first\":\"%t\"}"
-var logstr_optional = "{\"@timestamp\":\"%s\", \"key\":\"%s\", \"group\":\"%s\", \"from\":\"%s\", \"channel\":\"%s\", \"index\":%d, \"news_id\":%d, \"category_id\":%d, \"category_index\":%d, \"task_key\":\"%s\", \"page\":%d, \"page_limit\":%d, \"use_time\":%d, \"udid\":\"%s\", \"device_id\":\"%s\", \"imei1\":\"%s\", \"imei2\":\"%s\", \"os\":\"%s\", \"os_version\":\"%s\", \"app_version\":\"%s\", \"app_version_code\":%d, \"model\":\"%s\", \"intranet_ip\":\"%s\", \"ip\":\"%s\", \"ssid\":\"%s\", \"network_type\":\"%s\", \"mac\":\"%s\", \"brand\":\"%s\", \"is_simulator\":\"%t\", \"device_feature\":\"%s\", \"ua\":\"%s\", \"token\":\"%s\", \"user_id\":\"%d\", \"is_first\":\"%t\", \"custom_params\":\"%s\"}"
+var logstr = "{\"@timestamp\":\"%s\", \"ip\":\"%s\", \"ua\":\"%s\", \"token\":\"%s\", \"user_id\":\"%d\", \"from\":\"%s\", \"channel\":\"%s\", \"udid\":\"%s\", \"os\":\"%s\", \"os_version\":\"%s\", \"app_version\":\"%s\", \"app_version_code\":%d, \"model\":\"%s\", \"intranet_ip\":\"%s\", \"ssid\":\"%s\", \"network_type\":\"%s\", \"key\":\"%s\", \"group\":\"%s\", \"index\":%d, \"news_id\":%d, \"category_id\":%d, \"category_index\":%d, \"task_key\":\"%s\", \"page\":%d, \"page_limit\":%d, \"use_time\":%d, \"brand\":\"%s\", \"is_first\":\"%t\", \"is_simulator\":\"%t\", \"imei1\":\"%s\","
+var logstr_single_log = "\"mac\":\"%s\", \"device_feature\":\"%s\", \"device_id\":\"%s\", \"imei2\":\"%s\", \"battery\":%d, \"idfa\":\"%s\"}"
+var logstr_android = "\"mac\":\"%s\", \"device_feature\":\"%s\", \"device_id\":\"%s\", \"imei2\":\"%s\", \"custom_params\":\"%s\"}"
+var logstr_ios = "\"battery\":%d, \"idfa\":\"%s\"}"
 
 func ApplogHandler(w http.ResponseWriter, r *http.Request) {
 	defer func() {
@@ -46,17 +48,17 @@ func ApplogHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("json unmarshal:" + err.Error()))
 		return
 	}
-	util.Log.Info(logstr, time.Now().Format("2006-01-02T15:04:05.000+08:00"),
-		applog.Key, applog.Group, applog.From, applog.Channel,
-		checkZero(applog.Index), checkZero(applog.NewsId),
-		checkZero(applog.CategoryId), checkZero(applog.CategoryIndex),
-		applog.TaskKey, checkZero(applog.Page), checkZero(applog.PageLimit),
-		checkZero(applog.UseTime), applog.Udid, applog.DeviceId, applog.Imei1,
-		applog.Imei2, applog.Os, applog.OsVersion, applog.AppVersion,
-		checkZero(applog.AppVersionCode), applog.Model, applog.IntranetIp,
-		applog.Ip, applog.Ssid, applog.NetworkType, applog.Mac,
-		applog.Brand, applog.IsSimulator, applog.DeviceFeature, applog.Ua,
-		applog.Token, checkZero(applog.UserId), applog.IsFirst)
+	util.Log.Info(logstr+logstr_single_log, time.Now().Format("2006-01-02T15:04:05.000+08:00"),
+		applog.Ip, applog.Ua, applog.Token, checkZero(applog.UserId),
+		applog.From, applog.Channel, applog.Udid, applog.Os,
+		applog.OsVersion, applog.AppVersion, checkZero(applog.AppVersionCode),
+		applog.Model, applog.IntranetIp, applog.Ssid, applog.NetworkType,
+		applog.Key, applog.Group, checkZero(applog.Index), checkZero(applog.NewsId),
+		checkZero(applog.CategoryId), checkZero(applog.CategoryIndex), applog.TaskKey,
+		checkZero(applog.Page), checkZero(applog.PageLimit),
+		checkZero(applog.UseTime), applog.Brand, applog.IsFirst, applog.IsSimulator,
+		applog.Imei1, applog.Mac, applog.DeviceFeature, applog.DeviceId, applog.Imei2,
+		applog.Battery, applog.Idfa)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -118,6 +120,10 @@ func BatchlogHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ip := batchlog.Ip
+	ua, _ := url.QueryUnescape(batchlog.Ua)
+	token := batchlog.Token
+	user_id := checkZero(batchlog.UserId)
 	from := strings.ToLower(commonData[1])
 	channel := strings.ToLower(commonData[2])
 	udid := commonData[3]
@@ -127,29 +133,45 @@ func BatchlogHandler(w http.ResponseWriter, r *http.Request) {
 	app_version_code := str2int(commonData[7])
 	model := commonData[8]
 	intranet_ip := commonData[9]
-	ip := batchlog.Ip
 	ssid := commonData[10]
 	network_type := commonData[11]
-	mac := commonData[12][:17]
-	brand := commonData[13]
-	is_simulator := str2bool(commonData[15])
-	device_feature := commonData[16]
+
+	mac := ""
+	brand := ""
+	is_first := false
+	is_simulator := false
+	device_feature := ""
 	device_id := ""
 	imei1 := ""
 	imei2 := ""
-	if 18 <= len(commonData) {
-		device_id = limitLen(commonData[17], 32)
+	battery := 0
+	idfa := ""
+
+	if 2 == batchlog.System {
+		brand = commonData[12]
+		is_first = str2bool(commonData[13])
+		is_simulator = str2bool(commonData[14])
+		imei1 = limitLen(commonData[15], 20)
+		battery = str2int(commonData[16])
+		idfa = commonData[17]
+
+	} else {
+		mac = commonData[12][:17]
+		brand = commonData[13]
+		is_first = str2bool(commonData[14])
+		is_simulator = str2bool(commonData[15])
+		device_feature = commonData[16]
+
+		if 18 <= len(commonData) {
+			device_id = limitLen(commonData[17], 32)
+		}
+		if 19 <= len(commonData) {
+			imei1 = limitLen(commonData[18], 20)
+		}
+		if 20 <= len(commonData) {
+			imei2 = limitLen(commonData[19], 20)
+		}
 	}
-	if 19 <= len(commonData) {
-		imei1 = limitLen(commonData[18], 20)
-	}
-	if 20 <= len(commonData) {
-		imei2 = limitLen(commonData[19], 20)
-	}
-	ua, _ := url.QueryUnescape(batchlog.Ua)
-	token := batchlog.Token
-	user_id := checkZero(batchlog.UserId)
-	is_first := str2bool(commonData[14])
 
 	for j, data := range rawData {
 		data_decode, _ := url.QueryUnescape(data)
@@ -174,23 +196,25 @@ func BatchlogHandler(w http.ResponseWriter, r *http.Request) {
 		now := time.Now()
 		ms, _ := time.ParseDuration(fmt.Sprintf("%dms", j))
 		now_ := now.Add(ms)
-		if 12 <= len(arrD) {
-			custom_params := arrD[11]
-			util.Log.Info(logstr_optional, now_.Format("2006-01-02T15:04:05.000+08:00"),
-				key, group, from, channel, index, news_id, category_id,
-				category_index, task_key, page, page_limit, use_time, udid,
-				device_id, imei1, imei2, os, os_version, app_version,
-				app_version_code, model, intranet_ip, ip, ssid, network_type, mac,
-				brand, is_simulator, device_feature, ua, token, user_id, is_first,
-				custom_params)
-
+		if 2 != batchlog.System {
+			custom_params := ""
+			if 12 <= len(arrD) {
+				custom_params = arrD[11]
+			}
+			util.Log.Info(logstr+logstr_android, now_.Format("2006-01-02T15:04:05.000+08:00"),
+				ip, ua, token, user_id, from, channel, udid, os, os_version,
+				app_version, app_version_code, model, intranet_ip, ssid,
+				network_type, key, group, index, news_id, category_id,
+				category_index, task_key, page, page_limit, use_time, brand,
+				is_first, is_simulator, imei1, mac, device_feature, device_id,
+				imei2, custom_params)
 		} else {
-			util.Log.Info(logstr, now_.Format("2006-01-02T15:04:05.000+08:00"),
-				key, group, from, channel, index, news_id, category_id,
-				category_index, task_key, page, page_limit, use_time, udid,
-				device_id, imei1, imei2, os, os_version, app_version,
-				app_version_code, model, intranet_ip, ip, ssid, network_type, mac,
-				brand, is_simulator, device_feature, ua, token, user_id, is_first)
+			util.Log.Info(logstr+logstr_ios, now_.Format("2006-01-02T15:04:05.000+08:00"),
+				ip, ua, token, user_id, from, channel, udid, os, os_version,
+				app_version, app_version_code, model, intranet_ip, ssid,
+				network_type, key, group, index, news_id, category_id,
+				category_index, task_key, page, page_limit, use_time, brand,
+				is_first, is_simulator, imei1, battery, idfa)
 		}
 	}
 
