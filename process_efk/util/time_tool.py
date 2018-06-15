@@ -16,10 +16,11 @@ def get_someday_str(someday=0, mformat='%Y-%m-%d'):
 
 def get_someday_es_format(someday=0):
     dt = datetime.today() + timedelta(someday)
-    return dt.isoformat() + "+08:00",
+    return dt.isoformat() + "+08:00"
 
 
 
 if __name__ == '__main__':
     print get_weehours_of_someday(3)
     print get_someday_str(3)
+    print get_someday_es_format()
