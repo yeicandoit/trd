@@ -58,7 +58,7 @@ def get_query(nday=1):
 def get_user_device_count(query_active_user={}):
     num_user, num_device = 0, 0
     r = requests.post(URL_ELASTICSEARCH_APPLOG, headers=JSON_HEADER,
-                      data=json.dumps(query_active_user), timeout=(10, 20))
+                      data=json.dumps(query_active_user), timeout=(60, 120))
     if 200 == r.status_code:
         r_json = r.json()
         num_user = r_json["aggregations"]["count"]["value"]
@@ -71,7 +71,7 @@ def get_user_device_count(query_active_user={}):
         {"match_phrase": {"device_id.keyword": {"query": ""}}}]
 
     r = requests.post(URL_ELASTICSEARCH_APPLOG, headers=JSON_HEADER,
-                      data=json.dumps(query_active_user), timeout=(10, 20))
+                      data=json.dumps(query_active_user), timeout=(60, 120))
     if 200 == r.status_code:
         r_json = r.json()
         num_device = r_json["aggregations"]["count"]["value"]
@@ -93,7 +93,7 @@ def add_user_device(num_user, num_device, someday):
         "num_user": num_user
     }
     r = requests.post(url, headers=JSON_HEADER,
-                      data=json.dumps(active_data), timeout=(10, 20))
+                      data=json.dumps(active_data), timeout=(60, 120))
     if 200 != r.status_code and 201 != r.status_code:
         logger.error("request active index failed, status_code:%d, reason:%s",
                      r.status_code, r.reason)

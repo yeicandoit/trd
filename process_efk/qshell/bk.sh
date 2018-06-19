@@ -29,3 +29,4 @@ if [ $? -ne 0 ]; then
     exit
 fi
 rm -rf /var/taoredian_es_bk/zip_$applog
+curl -XDELETE http://127.0.0.1:9200/$applog
