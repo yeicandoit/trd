@@ -58,7 +58,7 @@ def get_user_device_count(query_online_user={}, nday=1):
             }
         ]
         r = requests.post(URL_ELASTICSEARCH_APPLOG, headers=JSON_HEADER,
-                          data=json.dumps(query_online_user), timeout=(10, 20))
+                          data=json.dumps(query_online_user), timeout=(60, 120))
         timestamp = start + (i + 1) * 300
         time_array = time.localtime(timestamp)
         key = time.strftime("%Y-%m-%d_%H-%M-%S", time_array)
@@ -90,7 +90,7 @@ def get_user_device_count(query_online_user={}, nday=1):
 
         ]
         r = requests.post(URL_ELASTICSEARCH_APPLOG, headers=JSON_HEADER,
-                          data=json.dumps(query_online_user), timeout=(10, 20))
+                          data=json.dumps(query_online_user), timeout=(60, 120))
         if 200 == r.status_code:
             r_json = r.json()
             timestamp = start + (i + 1) * 300
@@ -113,7 +113,7 @@ def add_user_device(online):
             "num_user": v["num_user"]
         }
         r = requests.post(url, headers=JSON_HEADER,
-                          data=json.dumps(online_data), timeout=(10, 20))
+                          data=json.dumps(online_data), timeout=(60, 120))
         if 200 != r.status_code and 201 != r.status_code:
             logger.error("request online index failed, status_code:%d, reason:%s",
                          r.status_code, r.reason)

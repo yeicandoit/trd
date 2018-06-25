@@ -67,7 +67,7 @@ def get_device(duration=900):
     }
     # logger.debug(search_data)
     r = requests.post(URL_ELASTICSEARCH_APPLOG, headers=JSON_HEADER,
-                      data=json.dumps(search_data), timeout=(30, 60))
+                      data=json.dumps(search_data), timeout=(60, 120))
     if 200 == r.status_code:
         r_json = r.json()
         # logger.debug(r.json())
@@ -115,7 +115,7 @@ def get_new_device(arr_device_id=[]):
         devices_to_verify = arr_device_id[i:i+10]
         search_new_device["query"]["constant_score"]["filter"]["terms"]["device_id.keyword"] = devices_to_verify
         r = requests.post(URL_ELASTICSEARCH_DEVICE, headers=JSON_HEADER,
-                          data=json.dumps(search_new_device), timeout=(10, 20))
+                          data=json.dumps(search_new_device), timeout=(60, 120))
         if 200 == r.status_code:
             r_json = r.json()
             if len(r_json['hits']['hits']) != len(devices_to_verify):
@@ -144,7 +144,7 @@ def add_new_device(new_device_ids=[], hash_device_ids={}):
         ) else "unkown"
         logger.info(device_data)
         requests.post(URL_ELASTICSEARCH_DEVICE_ADD, headers=JSON_HEADER,
-                      data=json.dumps(device_data), timeout=(10, 20))
+                      data=json.dumps(device_data), timeout=(60, 120))
 
 
 if __name__ == '__main__':
