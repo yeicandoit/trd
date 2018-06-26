@@ -11,7 +11,7 @@ logger = logging.getLogger('main')
 URL_ELASTICSEARCH_PARENT_INFO = "http://localhost:9200/parent_info/doc"
 JSON_HEADER = {"Content-Type": "application/json"}
 
-# Add mapping: curl -H "Content-Type:application/json" -XPOST  http://127.0.0.1:9200/parent_info/doc/_mapping -d '{"properties": {"@timestamp":{"type":"date"}, "channel":{"type":"keyword"}, "num_user":{"type":"long"}, "num_parent":{"type":"long"}, "percent_parent":{"type":"float"}, "num_active_parent":{"type":"long"}, "percent_active_parent":{"type":"float"}, "total_income":{"type":"long"}, "total_rebate":{"type":"long"}, "num_child":{"type":"long"}, "num_new_child":{"type":"long"}, "average_child_per_parent":{"type":"float"}, "average_rebate_per_child":{"type":"float"}, "num_new_parent":{"type":"long"},"num_child_increase_parent":{"type":"long"},"num_active_child":{"type":"long"},"today_income":{"type":"long"},"today_rebate":{"type":"long"}}}'
+# Add mapping: curl -H "Content-Type:application/json" -XPOST  http://127.0.0.1:9200/parent_info/doc/_mapping -d '{"properties": {"@timestamp":{"type":"date"}, "channel":{"type":"keyword"}, "num_user":{"type":"long"}, "num_parent":{"type":"long"}, "percent_parent":{"type":"float"}, "num_active_parent":{"type":"long"}, "percent_active_parent":{"type":"float"}, "total_income":{"type":"long"}, "total_rebate":{"type":"long"}, "num_child":{"type":"long"}, "num_new_child":{"type":"long"}, "average_child_per_parent":{"type":"float"}, "average_rebate_per_child":{"type":"float"}, "num_new_parent":{"type":"long"},"num_child_increase_parent":{"type":"long"},"num_active_child":{"type":"long"},"today_income":{"type":"long"},"today_rebate":{"type":"long"}, "num_total_parent":{"type":"long"}}}'
 
 
 def get_active_child(nday=1):
@@ -43,6 +43,21 @@ def get_parent_info(nday=1):
     data["all_channel"] = {}
     day1 = time_tool.get_someday_str(-nday)
     day2 = time_tool.get_someday_str(-nday+1)
+
+    # 当日总师傅数
+    sql_channel_total_parent_count = "select us.channel, count(distinct u.parent_id) from users as u join user_statistics as us on (u.id = us.user_id) where u.bind_parent_at < \"%s\" group by us.channel" % day2
+    rt = mysql_tool.querydb(sql_channel_total_parent_count,
+                            logger, sql_channel_total_parent_count)
+    for v in rt:
+        if v[0] in data.keys():
+            data[v[0]]['num_total_parent'] = int(v[1])
+        else:
+            data[v[0]] = {}
+            data[v[0]]['num_total_parent'] = int(v[1])
+    sql_total_parent_count = "select count(distinct parent_id) from users where bind_parent_at < \"%s\"" % day2
+    rt = mysql_tool.querydb(sql_total_parent_count,
+                            logger, sql_total_parent_count)
+    data["all_channel"]['num_total_parent'] = int(rt[0][0])
 
     # 当日新增的师傅
     sql_channel_new_parent_count = "select us.channel, count(distinct u.parent_id) from users as u join user_statistics as us on (u.id = us.user_id) where u.bind_parent_at >= \"%s\" and u.bind_parent_at < \"%s\" and u.parent_id not in (select distinct parent_id from users where bind_parent_at < \"%s\") group by us.channel" % (
@@ -94,17 +109,17 @@ def get_parent_info(nday=1):
     data["all_channel"]['num_new_child'] = int(rt[0][0])
 
     # 师傅的总收入
-    sql_channel_income = "select channel, sum(total_point_income) from user_statistics where user_id in (select distinct parent_id from users) group by channel"
-    rt = mysql_tool.querydb(sql_channel_income, logger, sql_channel_income)
-    for v in rt:
-        if v[0] in data.keys():
-            data[v[0]]['total_income'] = int(v[1])
-        else:
-            data[v[0]] = {}
-            data[v[0]]['total_income'] = int(v[1])
-    sql_income = "select sum(total_point_income) from user_statistics where user_id in (select distinct parent_id from users)"
-    rt = mysql_tool.querydb(sql_income, logger, sql_income)
-    data["all_channel"]['total_income'] = int(rt[0][0])
+    # sql_channel_income = "select channel, sum(total_point_income) from user_statistics where user_id in (select distinct parent_id from users) group by channel"
+    # rt = mysql_tool.querydb(sql_channel_income, logger, sql_channel_income)
+    # for v in rt:
+    #     if v[0] in data.keys():
+    #         data[v[0]]['total_income'] = int(v[1])
+    #     else:
+    #         data[v[0]] = {}
+    #         data[v[0]]['total_income'] = int(v[1])
+    # sql_income = "select sum(total_point_income) from user_statistics where user_id in (select distinct parent_id from users)"
+    # rt = mysql_tool.querydb(sql_income, logger, sql_income)
+    # data["all_channel"]['total_income'] = int(rt[0][0])
 
     # 师傅的进贡收入
     sql_channel_rebate = "select channel, sum(child_point_rebate) from user_statistics where user_id in (select distinct parent_id from users) group by channel"
@@ -123,8 +138,8 @@ def get_parent_info(nday=1):
     active_child = get_active_child(nday)
     for k, v in data.items():
         if "num_child_increase_parent" in v.keys() and "num_new_child" in v.keys() and v["num_child_increase_parent"] > 0:
-            v["average_child_per_parent"] = v["num_new_child"] / \
-                float(v["num_child_increase_parent"])
+            v["average_child_per_parent"] = round(
+                v["num_new_child"] / float(v["num_child_increase_parent"]), 2)
         if k in active_child.keys():
             v["num_active_child"] = active_child[k]
 
@@ -142,21 +157,22 @@ def process(nday=1):
         url = URL_ELASTICSEARCH_PARENT_INFO + "/" + yid + "_" + k
         r = requests.get(url, headers=JSON_HEADER, timeout=(10, 20))
         if 200 != r.status_code:
-            logger.error("request parent_info index failed, status_code:%d, reason:%s",
-                         r.status_code, r.reason)
+            logger.error("request parent_info index failed, status_code:%d, reason:%s, k:%s",
+                         r.status_code, r.reason, k)
         else:
             r_json = r.json()
             if "_source" in r_json.keys():
                 yd = r_json["_source"]
-                if "total_income" in v.keys():
-                    ydti = yd["total_income"] if "total_income" in yd.keys() else 0
-                    v["today_income"] = v["total_income"] - ydti
+                # if "total_income" in v.keys():
+                #     ydti = yd["total_income"] if "total_income" in yd.keys() else 0
+                #     v["today_income"] = v["total_income"] - ydti
                 if "total_rebate" in v.keys():
                     ydtr = yd["total_rebate"] if "total_rebate" in yd.keys() else 0
                     v["today_rebate"] = v["total_rebate"] - ydtr
                     if "num_active_child" in v.keys() and v["num_active_child"] > 0:
-                          v["average_rebate_per_child"] = v["today_rebate"] / \
-                              float(v["num_active_child"])
+                        # 平均进贡值 = 当日进贡收入 / 活跃徒弟数  详见《后台数据维度(3).xlsx》
+                        v["average_rebate_per_child"] = round(
+                            v["today_rebate"] / float(v["num_active_child"]), 2)
         v['@timestamp'] = time_tool.get_someday_es_format(-nday)
         v["channel"] = k
         _id = time_tool.get_someday_str(-nday)
