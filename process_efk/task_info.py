@@ -45,14 +45,14 @@ def get_task_info(nday=1):
     data[0]['task_id'] = 0
     data[0]['task_name'] = u"今日新增注册用户完成新手任务平均个数"
     if rta[0][1] > 0:
-        data[0]['num'] = float(rta[0][0]) / float(rta[0][1])
+        data[0]['num'] = round(float(rta[0][0]) / float(rta[0][1]), 2)
     sql = "select sum(today_count), count(distinct user_id) from user_task_day_records where day = \"%s\" and user_id in (select id from users where id in (select distinct parent_id from users) and registered_at >= \"%s\" and registered_at < \"%s\") and task_id in(1,2,3,22,4,5,29,30,31,33)" % (day1, day1, day2)
     rtp = mysql_tool.querydb(sql, logger, sql)
     if rtp[0][1] > 0:
-        data[0]['num_for_parent'] = float(rtp[0][0]) / float(rtp[0][1])
+        data[0]['num_for_parent'] = round(float(rtp[0][0]) / float(rtp[0][1]), 2)
     if rta[0][1] - rtp[0][1] > 0:
-        data[0]['num_for_no_child'] = float(
-            rta[0][0] - rtp[0][0]) / float(rta[0][1] - rtp[0][1])
+        data[0]['num_for_no_child'] = round(float(
+            rta[0][0] - rtp[0][0]) / float(rta[0][1] - rtp[0][1]), 2)
 
     return data
 

@@ -64,14 +64,14 @@ def get_cash_user(nday=1):
     if len(rt) > 0:
         data['num_user_new'] = int(rt[0][0])
         if rt[0][0] > 0:
-            data['average_time_first'] = float(rt[0][1] / rt[0][0])
+            data['average_time_first'] = round(float(rt[0][1] / rt[0][0]), 2)
 
     sql_new_5_yuan_user = "select count(ufy.user_id), sum(datediff(ufy.updated_at, u.registered_at)) from user_five_yuan_withdraw_cash_task_records as ufy join users as u on (ufy.user_id = u.id) where ufy.updated_at >= \"%s\" and ufy.updated_at < \"%s\" and ufy.is_withdraw = 1" % (day1, day2)
     rt = mysql_tool.querydb(sql_new_5_yuan_user, logger, sql_new_5_yuan_user)
     if len(rt) > 0:
         data['count_5yuan'] = rt[0][0]
         if rt[0][0] > 0:
-            data['average_time_first_5yuan'] = float(rt[0][1] / rt[0][0])
+            data['average_time_first_5yuan'] = round(float(rt[0][1] / rt[0][0]), 2)
 
     return data
 

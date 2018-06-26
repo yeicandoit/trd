@@ -175,7 +175,7 @@ def update_rate(d=0):
         ret = list(set(nd).intersection(set(yud)))
         if 0 == len(nd):
             continue
-        rate = len(ret)/float(len(nd))
+        rate = round(len(ret)/float(len(nd)), 2)
         print key, rate, len(nd)
         set_remain_rate(key, rate, len(nd), d)
 

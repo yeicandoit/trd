@@ -1,3 +1,4 @@
+# coding=utf-8
 import requests
 import json
 import time
@@ -9,6 +10,8 @@ from datetime import datetime, timedelta
 URL_ELASTICSEARCH_APPLOG = "http://localhost:9200/applog-*/doc/_search"
 URL_ELASTICSEARCH_APP_STAY = "http://localhost:9200/app-stay/doc"
 JSON_HEADER = {"Content-Type": "application/json"}
+
+# Add mapping: curl -H "Content-Type:application/json" -XPOST  http://127.0.0.1:9200/app-stay/doc/_mapping -d '{"properties": {"app_stay":{"type":"long"},"app_stay_first":{"type":"long"},"@timestamp":{"type":"date"}, "app_stay_show":{"type":"keyword"}, "app_stay_first_show":{"type":"keyword"}}}'
 
 
 def get_query_use_time(nday):
@@ -170,7 +173,9 @@ def update_app_stay(app_stay_first=1, app_stay=1, someday=1):
     app_stay_data = {
         "@timestamp": dt.isoformat() + "+08:00",
         "app_stay": app_stay,
-        "app_stay_first": app_stay_first
+        "app_stay_show": str(app_stay/60) + u"分" + str(app_stay % 60) + u"秒" if app_stay > 60 else str(app_stay) + u"秒",
+        "app_stay_first": app_stay_first,
+        "app_stay_first_show": str(app_stay_first/60) + u"分" + str(app_stay_first % 60) + u"秒" if app_stay_first > 60 else str(app_stay_first) + u"秒"
     }
     url = URL_ELASTICSEARCH_APP_STAY + "/" + _id
     print app_stay_data
