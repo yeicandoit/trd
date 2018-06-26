@@ -458,7 +458,7 @@ def process(nday=1):
 
     mysql_tool.closedb()
 
-    for k, v in user_channel.items():
+    for k, v in user_channel_stay.items():
         len_v = len(v)
         data = {}
         data["channel"] = k
