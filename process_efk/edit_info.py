@@ -104,6 +104,13 @@ def get_edit_video_info(nday=1):
     for v in rt:
         video_new_count[int(v[0])] = int(v[1])
 
+    # 获取有效阅读
+    video_effective_reading = {}
+    sql = "select v.category_id, count(*) from video_effective_readings as ver join videos as v on (ver.video_id = v.id) where ver.created_at >= \"%s\" and ver.created_at < \"%s\" and ver.effective != 0 group by v.category_id" % (day1, day2)
+    rt = mysql_tool.querydb(sql, logger, sql)
+    for v in rt:
+        video_effective_reading[int(v[0])] = int(v[1])
+
     # 获取视频pv
     sql = "select category_id, sum(real_pv) from videos group by category_id"
     rt = mysql_tool.querydb(sql, logger, sql)
@@ -118,6 +125,8 @@ def get_edit_video_info(nday=1):
             data[k]['category_name'] = video_categories[k]
         if k in video_new_count.keys():
             data[k]['new_count'] = video_new_count[k]
+        if k in video_effective_reading.keys():
+            data[k]['effective_reading'] = video_effective_reading[k]
 
     # 获取热点视频
     data[HOT_VIDEO_CATEGORY_ID] = {}
