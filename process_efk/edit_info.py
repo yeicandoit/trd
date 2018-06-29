@@ -13,7 +13,7 @@ HOT_NEWS_CATEGORY_ID = 99990
 HOT_VIDEO_CATEGORY_ID = 99991
 HOT_SHOW = u"热点"
 
-# Add mapping: curl -H "Content-Type:application/json" -XPOST  http://127.0.0.1:9200/edit_info/doc/_mapping -d '{"properties": {"@timestamp":{"type":"date"}, "channel":{"type":"keyword"}, "channel_name":{"type":"keyword"}, "category_id":{"type":"long"}, "category_name":{"type":"keyword"}, "pv":{"type":"long"},"pv_total":{"type":"long"}, "effective_reading":{"type":"long"}, "like_count":{"type":"long"}, "like_count_total":{"type":"long"}, "comments_count":{"type":"long"}, "comments_count_total":{"type":"long"}, "new_count":{"type":"long"}}}'
+# Add mapping: curl -H "Content-Type:application/json" -XPOST  http://127.0.0.1:9200/edit_info/doc/_mapping -d '{"properties": {"@timestamp":{"type":"date"}, "channel":{"type":"keyword"}, "channel_name":{"type":"keyword"}, "category_id":{"type":"long"}, "category_name":{"type":"keyword"}, "pv":{"type":"long"},"pv_total":{"type":"long"}, "effective_reading":{"type":"long"}, "like_count":{"type":"long"}, "like_count_total":{"type":"long"}, "comments_count":{"type":"long"}, "comments_count_total":{"type":"long"}, "new_count":{"type":"long"}, "zan_count":{"type":"long"}}}'
 
 
 def get_edit_news_info(nday=1):
@@ -43,8 +43,29 @@ def get_edit_news_info(nday=1):
     for v in rt:
         news_effective_reading[int(v[0])] = int(v[1])
 
+    # 获取评论数
+    comments_count_hash = {}
+    sql = "select n.category_id, count(*) from news_comments as nc join news as n on(nc.news_id = n.id) where nc.created_at >= \"%s\" and nc.created_at < \"%s\" group by n.category_id" % (day1, day2)
+    rt = mysql_tool.querydb(sql, logger, sql)
+    for v in rt:
+        comments_count_hash[int(v[0])] = int(v[1])
+
+    # 获取收藏数
+    like_count_hash = {}
+    sql = "select n.category_id, count(*) from user_like_news as uln join news as n on(uln.news_id = n.id) where uln.created_at >= \"%s\" and uln.created_at < \"%s\" group by n.category_id" % (day1, day2)
+    rt = mysql_tool.querydb(sql, logger, sql)
+    for v in rt:
+        like_count_hash[int(v[0])] = int(v[1])
+
+    # 获取点赞数
+    zan_count_hash = {}
+    sql = "select n.category_id, count(*) from user_zan_news_comments as uznc join news_comments as nc on (uznc.comment_id = nc.id) join news as n on(nc.news_id = n.id) where uznc.created_at >= \"%s\" and uznc.created_at < \"%s\" group by n.category_id" % (day1, day2)
+    rt = mysql_tool.querydb(sql, logger, sql)
+    for v in rt:
+        zan_count_hash[int(v[0])] = int(v[1])
+
     # 获取pv, 收藏, 评论数
-    sql = "select category_id, sum(real_pv), sum(like_count), sum(comments_count) from news group by category_id"
+    sql = "select category_id, sum(real_pv) from news group by category_id"
     rt = mysql_tool.querydb(sql, logger, sql)
     for v in rt:
         k = int(v[0])
@@ -53,14 +74,18 @@ def get_edit_news_info(nday=1):
         data[k]['channel'] = "news"
         data[k]['category_id'] = k
         data[k]['pv_total'] = int(v[1])
-        data[k]['like_count_total'] = int(v[2])
-        data[k]['comments_count_total'] = int(v[3])
         if k in news_categories.keys():
             data[k]['category_name'] = news_categories[k]
         if k in news_new_count.keys():
             data[k]['new_count'] = news_new_count[k]
         if k in news_effective_reading.keys():
             data[k]['effective_reading'] = news_effective_reading[k]
+        if k in comments_count_hash.keys():
+            data[k]['comments_count'] = comments_count_hash[k]
+        if k in like_count_hash.keys():
+            data[k]['like_count'] = like_count_hash[k]
+        if k in zan_count_hash.keys():
+            data[k]['zan_count'] = zan_count_hash[k]
 
     # 获取新增热点资讯
     data[HOT_NEWS_CATEGORY_ID] = {}
@@ -170,12 +195,6 @@ def process(nday=1):
                     yd = r_json["_source"]
                     if "pv_total" in yd.keys():
                         v["pv"] = v["pv_total"] - yd["pv_total"]
-                    if "like_count_total" in yd.keys():
-                        v["like_count"] = v["like_count_total"] - \
-                            yd["like_count_total"]
-                    if "comments_count_total" in yd.keys():
-                        v["comments_count"] = v["comments_count_total"] - \
-                            yd["comments_count_total"]
             v['@timestamp'] = time_tool.get_someday_es_format(-nday)
             _id = time_tool.get_someday_str(-nday)
             url = URL_ELASTICSEARCH_EDIT_INFO + \
