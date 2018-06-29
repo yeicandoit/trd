@@ -39,7 +39,8 @@ def get_cash_user(nday=1):
     rt = mysql_tool.querydb(sql_black, logger, sql_black)
     if len(rt) > 0:
         data['num_blacklist'] = int(rt[0][0])
-        data['cash_blacklist'] = int(rt[0][1]) / 100
+        if rt[0][1] is not None:
+            data['cash_blacklist'] = int(rt[0][1]) / 100
 
     sql_cheating = "select count(distinct uwo.user_id), sum(uwo.price) from user_withdraw_orders as uwo left join users as u on (uwo.user_id = u.id) where uwo.created_at >= \"%s\" and uwo.created_at < \"%s\" and u.user_type = 4" % (day1, day2)
     rt = mysql_tool.querydb(sql_cheating, logger, sql_cheating)
