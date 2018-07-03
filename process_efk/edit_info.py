@@ -7,6 +7,7 @@ from util import mysql_tool, time_tool
 
 logging.config.fileConfig('conf/log.conf')
 logger = logging.getLogger('main')
+URL_ELASTICSEARCH_APPLOG = "http://localhost:9200/applog-*/doc/_search"
 URL_ELASTICSEARCH_EDIT_INFO = "http://localhost:9200/edit_info/doc"
 JSON_HEADER = {"Content-Type": "application/json"}
 HOT_NEWS_CATEGORY_ID = 99990
@@ -19,11 +20,108 @@ NEWS_HOT_SEVEN_SHOW = "七天榜"
 NEWS_HOT_TOTAL = 99994
 NEWS_HOT_TOTAL_SHOW = "总榜"
 
-# Add mapping: curl -H "Content-Type:application/json" -XPOST  http://127.0.0.1:9200/edit_info/doc/_mapping -d '{"properties": {"@timestamp":{"type":"date"}, "channel":{"type":"keyword"}, "channel_name":{"type":"keyword"}, "category_id":{"type":"long"}, "category_name":{"type":"keyword"}, "pv":{"type":"long"},"pv_total":{"type":"long"}, "effective_reading":{"type":"long"}, "like_count":{"type":"long"}, "like_count_total":{"type":"long"}, "comments_count":{"type":"long"}, "comments_count_total":{"type":"long"}, "new_count":{"type":"long"}, "zan_count":{"type":"long"}}}'
+TOTAL_ID = 10000
+TOTAL_SHOW = "汇总"
 
+# Add mapping: curl -H "Content-Type:application/json" -XPOST  http://127.0.0.1:9200/edit_info/doc/_mapping -d '{"properties": {"@timestamp":{"type":"date"}, "channel":{"type":"keyword"}, "channel_name":{"type":"keyword"}, "category_id":{"type":"long"}, "category_name":{"type":"keyword"}, "pv":{"type":"long"},"pv_total":{"type":"long"}, "effective_reading":{"type":"long"}, "like_count":{"type":"long"}, "like_count_total":{"type":"long"}, "comments_count":{"type":"long"}, "comments_count_total":{"type":"long"}, "new_count":{"type":"long"}, "zan_count":{"type":"long"}, "new_choosed_count":{"type":"long"}, "new_published_count":{"type":"long"}, "yd_choosed_count":{"type":"long"}, "old_published_percentage":{"type":"long"}, "dau_count":{"type":"long"}, "share_count":{"type":"long"}, "pv_dau":{"type":"float"}, "pv_published":{"type":"float"}, "reading_pv":{"type":"float"}, "comments_pv":{"type":"float"}, "zan_pv":{"type":"float"}, "like_pv":{"type":"float"}, "share_pv":{"type":"float"}}}'
+
+
+def get_active_user_num(nday=1):
+    start = time_tool.get_weehours_of_someday(-nday)
+    query = {
+        "size": 0,
+        "aggs": {
+            "user_num": {
+                "cardinality": {
+                    "field": "user_id.keyword",
+                 }
+            }
+        },
+        "query": {
+            "bool": {
+                "must": [
+                    {
+                        "range": {
+                            "@timestamp": {
+                                "gte": start * 1000,
+                                "lte": (start + 86400) * 1000 - 1,
+                                "format": "epoch_millis"
+                            }
+
+                        }
+                    }
+                ],
+                "must_not": [
+                    {
+                        "match_phrase": {
+                            "user_id.keyword": {
+                                "query": "-1"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    }
+
+    r = requests.post(URL_ELASTICSEARCH_APPLOG, headers=JSON_HEADER,
+                      data=json.dumps(query), timeout=(30, 60))
+    if 200 == r.status_code:
+        r_json = r.json()
+        return r_json['aggregations']['user_num']['value']
+    else:
+        logger.error("request applog index failed, status_code:%d, reason:%s",
+                     r.status_code, r.reason)
+    return 0
+
+
+def get_share_num(nday=1):
+    start = time_tool.get_weehours_of_someday(-nday)
+    query = {
+        "size": 0,
+        "_source": {
+            "excludes": []
+        },
+        "query": {
+            "bool": {
+                "must": [
+                    {
+                        "range": {
+                            "@timestamp": {
+                                "gte": start * 1000,
+                                "lte": (start + 86400) * 1000 - 1,
+                                "format": "epoch_millis"
+                            }
+
+                        }
+                    }
+                ],
+                "must": [
+                    {
+                        "match_phrase": {
+                            "key.keyword": {
+                                "query": "app_news_share_button_click"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    }
+
+    r = requests.post(URL_ELASTICSEARCH_APPLOG, headers=JSON_HEADER,
+                      data=json.dumps(query), timeout=(30, 60))
+    if 200 == r.status_code:
+        r_json = r.json()
+        return r_json['hits']['total']
+    else:
+        logger.error("request applog index failed, status_code:%d, reason:%s",
+                     r.status_code, r.reason)
+    return 0
 
 def get_edit_news_info(nday=1):
     data = {}
+    day0 = time_tool.get_someday_str(-nday-1)
     day1 = time_tool.get_someday_str(-nday)
     day2 = time_tool.get_someday_str(-nday+1)
     tommorow = time_tool.get_someday_str(1)
@@ -35,12 +133,35 @@ def get_edit_news_info(nday=1):
     for v in rt:
         news_categories[int(v[0])] = v[1]
 
-    # 获取新增资讯
-    news_new_count = {}
-    sql = "select category_id, count(*) from news where created_at >= \"%s\" and created_at < \"%s\" group by category_id" % (day1, day2)
+    # 获取当日发布资讯
+    news_new_published_count = {}
+    sql = "select category_id, count(*) from news where published_at >= \"%s\" and published_at < \"%s\" group by category_id" % (day1, day2)
+    handle_sql_hash_total(news_new_published_count, sql, logger, TOTAL_ID)
+
+    # 获取今日发布的旧资讯占比数
+    news_old_published_percentage = {}
+    sql = "select category_id, count(*) from news where published_at >= \"%s\" and published_at < \"%s\" and created_at < \"%s\" group by category_id" % (day1, day2, day1)
     rt = mysql_tool.querydb(sql, logger, sql)
+    total = 0
     for v in rt:
-        news_new_count[int(v[0])] = int(v[1])
+        k = int(v[0])
+        total += int(v[1])
+        if k in news_new_published_count.keys() and news_new_published_count[k] != 0:
+            news_old_published_percentage[k] = round(
+                float(v[1])/news_new_published_count[k], 2)
+    if TOTAL_ID in news_new_published_count.keys() and news_new_published_count[TOTAL_ID] != 0:
+        news_old_published_percentage[TOTAL_ID] = round(
+            float(total)/news_new_published_count[TOTAL_ID], 2)
+
+    # 获取当日挑选资讯
+    news_new_chooseed_count = {}
+    sql = "select category_id, count(*) from news_raw_auto_releases where created_at >= \"%s\" and created_at < \"%s\" group by category_id" % (day1, day2)
+    handle_sql_hash_total(news_new_chooseed_count, sql, logger, TOTAL_ID)
+
+    # 获取昨天挑选资讯
+    news_yd_choosed_count = {}
+    sql = "select category_id, count(*) from news_raw_auto_releases where created_at >= \"%s\" and created_at < \"%s\" group by category_id" % (day0, day1)
+    handle_sql_hash_total(news_yd_choosed_count, sql, logger, TOTAL_ID)
 
     # 获取有效阅读
     news_effective_reading = {}
@@ -54,60 +175,115 @@ def get_edit_news_info(nday=1):
     # 获取评论数
     comments_count_hash = {}
     sql = "select n.category_id, count(*) from news_comments as nc join news as n on(nc.news_id = n.id) where nc.created_at >= \"%s\" and nc.created_at < \"%s\" group by n.category_id" % (day1, day2)
-    rt = mysql_tool.querydb(sql, logger, sql)
-    for v in rt:
-        comments_count_hash[int(v[0])] = int(v[1])
+    handle_sql_hash_total(comments_count_hash, sql, logger, TOTAL_ID)
 
     # 获取收藏数
     like_count_hash = {}
     sql = "select n.category_id, count(*) from user_like_news as uln join news as n on(uln.news_id = n.id) where uln.created_at >= \"%s\" and uln.created_at < \"%s\" group by n.category_id" % (day1, day2)
-    rt = mysql_tool.querydb(sql, logger, sql)
-    for v in rt:
-        like_count_hash[int(v[0])] = int(v[1])
+    handle_sql_hash_total(like_count_hash, sql, logger, TOTAL_ID)
 
     # 获取点赞数, 没有用 news_comments 获取点赞，是因为用户可以在当天评论昨天或更早的文章，这样用news_comments表就无法统计了
     zan_count_hash = {}
     sql = "select n.category_id, count(*) from user_zan_news_comments as uznc join news_comments as nc on (uznc.comment_id = nc.id) join news as n on(nc.news_id = n.id) where uznc.created_at >= \"%s\" and uznc.created_at < \"%s\" group by n.category_id" % (day1, day2)
-    rt = mysql_tool.querydb(sql, logger, sql)
-    for v in rt:
-        zan_count_hash[int(v[0])] = int(v[1])
+    handle_sql_hash_total(zan_count_hash, sql, logger, TOTAL_ID)
 
     # 获取pv
     sql = "select category_id, sum(real_pv) from news group by category_id"
     rt = mysql_tool.querydb(sql, logger, sql)
+    total = 0
     for v in rt:
         k = int(v[0])
+        total += int(v[1])
         data[k] = {}
         data[k]['channel_name'] = u"资讯"
         data[k]['channel'] = "news"
         data[k]['category_id'] = k
         data[k]['pv_total'] = int(v[1])
-        if k in news_categories.keys():
-            data[k]['category_name'] = news_categories[k]
-        if k in news_new_count.keys():
-            data[k]['new_count'] = news_new_count[k]
-        if k in news_effective_reading.keys():
-            data[k]['effective_reading'] = news_effective_reading[k]
-        if k in comments_count_hash.keys():
-            data[k]['comments_count'] = comments_count_hash[k]
-        if k in like_count_hash.keys():
-            data[k]['like_count'] = like_count_hash[k]
-        if k in zan_count_hash.keys():
-            data[k]['zan_count'] = zan_count_hash[k]
+        set_hash(news_categories, data[k], k, 'category_name')
+        set_hash(news_new_published_count, data[k], k, 'new_published_count')
+        set_hash(news_new_chooseed_count, data[k], k, 'new_choosed_count')
+        set_hash(news_yd_choosed_count, data[k], k, 'yd_choosed_count')
+        set_hash(news_old_published_percentage,
+                 data[k], k, 'old_published_percentage')
+        set_hash(news_effective_reading, data[k], k, 'effective_reading')
+        set_hash(comments_count_hash, data[k], k, 'comments_count')
+        set_hash(like_count_hash, data[k], k, 'like_count')
+        set_hash(zan_count_hash, data[k], k, 'zan_count')
+    data[TOTAL_ID] = {}
+    data[TOTAL_ID]['channel_name'] = u"资讯"
+    data[TOTAL_ID]['channel'] = "news"
+    data[TOTAL_ID]['category_id'] = TOTAL_ID
+    data[TOTAL_ID]['pv_total'] = total
+    data[TOTAL_ID]['category_name'] = TOTAL_SHOW
+    set_hash(news_new_published_count, data[TOTAL_ID], TOTAL_ID, 'new_published_count')
+    set_hash(news_new_chooseed_count, data[TOTAL_ID], TOTAL_ID, 'new_choosed_count')
+    set_hash(news_yd_choosed_count, data[TOTAL_ID], TOTAL_ID, 'yd_choosed_count')
+    set_hash(news_old_published_percentage,
+             data[TOTAL_ID], TOTAL_ID, 'old_published_percentage')
+    set_hash(news_effective_reading, data[TOTAL_ID], TOTAL_ID, 'effective_reading')
+    set_hash(comments_count_hash, data[TOTAL_ID], TOTAL_ID, 'comments_count')
+    set_hash(like_count_hash, data[TOTAL_ID], TOTAL_ID, 'like_count')
+    set_hash(zan_count_hash, data[TOTAL_ID], TOTAL_ID, 'zan_count')
+    data[TOTAL_ID]['dau_count'] = get_active_user_num(nday)
+    data[TOTAL_ID]['share_count'] = get_share_num(nday)
+
     return data
 
 
+def handle_sql_hash(mhash={}, sql="", lg=logger):
+    rt = mysql_tool.querydb(sql, lg, sql)
+    for v in rt:
+        mhash[int(v[0])] = int(v[1])
+
+
+def handle_sql_hash_total(mhash={}, sql="", lg=logger, hk=1):
+    rt = mysql_tool.querydb(sql, lg, sql)
+    total = 0
+    for v in rt:
+        total += int(v[1])
+        mhash[int(v[0])] = int(v[1])
+    mhash[hk] = total
+
+
+def set_hash(shash={}, dhash={}, key1=1, key2=1):
+    if key1 in shash.keys():
+        dhash[key2] = shash[key1]
+
+
 def get_hot_news_info(nday=1, data={}):
+    day0 = time_tool.get_someday_str(-nday-1)
     day1 = time_tool.get_someday_str(-nday)
     day2 = time_tool.get_someday_str(-nday+1)
     tommorow = time_tool.get_someday_str(1)
 
-    # 获取新增热点资讯
+    # 获取当天发布热点资讯
+    hot_new_published_count = 0
     data[HOT_NEWS_CATEGORY_ID] = {}
-    sql = "select count(*) from news where hot_at >= \"%s\" and hot_at < \"%s\"" % (day1, day2)
+    sql = "select count(*) from news where hot_at >= \"%s\" and hot_at < \"%s\" and published_at < \"%s\"" % (day1, day2, day2)
     rt = mysql_tool.querydb(sql, logger, sql)
     for v in rt:
-        data[HOT_NEWS_CATEGORY_ID]['new_count'] = int(v[0])
+        data[HOT_NEWS_CATEGORY_ID]['new_published_count'] = int(v[0])
+        hot_new_published_count = int(v[0])
+
+    # 获取今日发布的热点旧资讯占比数
+    sql = "select count(*) from news where hot_at >= \"%s\" and hot_at < \"%s\" and published_at < \"%s\" and created_at < \"%s\"" % (day1, day2, day2, day1)
+    rt = mysql_tool.querydb(sql, logger, sql)
+    for v in rt:
+        if hot_new_published_count > 0:
+            data[HOT_NEWS_CATEGORY_ID]['old_published_percentage'] = round(
+                float(v[0])/hot_new_published_count, 2)
+
+    # 获取当天挑选热点资讯
+    sql = "select count(*) from news_raw_auto_releases where created_at >= \"%s\" and created_at < \"%s\" and is_hot !=0" % (day1, day2)
+    rt = mysql_tool.querydb(sql, logger, sql)
+    for v in rt:
+        data[HOT_NEWS_CATEGORY_ID]['new_choosed_count'] = int(v[0])
+
+    # 获取昨天挑选热点资讯
+    sql = "select count(*) from news_raw_auto_releases where created_at >= \"%s\" and created_at < \"%s\" and is_hot !=0" % (day0, day1)
+    rt = mysql_tool.querydb(sql, logger, sql)
+    for v in rt:
+        data[HOT_NEWS_CATEGORY_ID]['yd_choosed_count'] = int(v[0])
 
     # 获取热点资讯有效阅读
     # sql = "select count(*) from news_effective_readings as ner join news as n on (ner.news_id = n.id) where ner.created_at >= \"%s\" and ner.created_at < \"%s\" and n.id in (select id from news where hot_at < \"%s\") and ner.effective != 0" % (day1, day2, day2)
@@ -163,7 +339,7 @@ def get_hot_list_info(nday=1, data={}):
             table, day1, day2)
         rt = mysql_tool.querydb(sql, logger, sql)
         for v in rt:
-            data[category_id]['new_count'] = int(v[0])
+            data[category_id]['new_published_count'] = int(v[0])
 
         # 获取有效阅读
         # sql = "select count(*) from news_effective_readings as ner join news as n on (ner.news_id = n.id) where ner.created_at >= \"%s\" and ner.created_at < \"%s\" and n.id in (select news_id from %s) and ner.effective != 0" % (day1, day2, table)
@@ -219,43 +395,47 @@ def get_edit_video_info(nday=1):
 
     # 获取新增视频
     video_new_count = {}
-    sql = "select category_id, count(*) from videos where created_at >= \"%s\" and created_at < \"%s\" group by category_id" % (day1, day2)
-    rt = mysql_tool.querydb(sql, logger, sql)
-    for v in rt:
-        video_new_count[int(v[0])] = int(v[1])
+    sql = "select category_id, count(*) from videos where published_at >= \"%s\" and published_at < \"%s\" group by category_id" % (day1, day2)
+    handle_sql_hash_total(video_new_count, sql, logger, TOTAL_ID)
 
     # 获取有效阅读
     video_effective_reading = {}
     sql = "select v.category_id, count(*) from video_effective_readings as ver join videos as v on (ver.video_id = v.id) where ver.created_at >= \"%s\" and ver.created_at < \"%s\" and ver.effective != 0 group by v.category_id" % (day1, day2)
-    rt = mysql_tool.querydb(sql, logger, sql)
-    for v in rt:
-        video_effective_reading[int(v[0])] = int(v[1])
+    handle_sql_hash_total(video_effective_reading, sql, logger, TOTAL_ID)
 
     # 获取视频pv
     sql = "select category_id, sum(real_pv) from videos group by category_id"
     rt = mysql_tool.querydb(sql, logger, sql)
+    total = 0
     for v in rt:
         k = int(v[0])
+        total += int(v[1])
         data[k] = {}
         data[k]['channel_name'] = u"视频"
         data[k]['channel'] = "video"
         data[k]['category_id'] = k
         data[k]['pv_total'] = int(v[1])
-        if k in video_categories.keys():
-            data[k]['category_name'] = video_categories[k]
-        if k in video_new_count.keys():
-            data[k]['new_count'] = video_new_count[k]
-        if k in video_effective_reading.keys():
-            data[k]['effective_reading'] = video_effective_reading[k]
+        set_hash(video_categories, data[k], k, 'category_name')
+        set_hash(video_new_count, data[k], k, 'new_published_count')
+        set_hash(video_effective_reading, data[k], k, 'effective_reading')
+    data[TOTAL_ID] = {}
+    data[TOTAL_ID]['channel_name'] = u"视频"
+    data[TOTAL_ID]['channel'] = "video"
+    data[TOTAL_ID]['category_name'] = TOTAL_SHOW
+    data[TOTAL_ID]['category_id'] = TOTAL_ID
+    data[TOTAL_ID]['pv_total'] = total
+    set_hash(video_new_count, data[TOTAL_ID], TOTAL_ID, 'new_published_count')
+    set_hash(video_effective_reading, data[TOTAL_ID], TOTAL_ID, 'effective_reading')
 
     # 获取热点视频
     data[HOT_VIDEO_CATEGORY_ID] = {}
-    sql = "select count(*) from videos where hot_at >= \"%s\" and hot_at < \"%s\"" % (day1, day2)
+    sql = "select count(*) from videos where hot_at >= \"%s\" and hot_at < \"%s\" and published_at < \"%s\"" % (day1, day2, day2)
     rt = mysql_tool.querydb(sql, logger, sql)
     for v in rt:
-        data[HOT_VIDEO_CATEGORY_ID]['new_count'] = int(v[0])
+        data[HOT_VIDEO_CATEGORY_ID]['new_published_count'] = int(v[0])
+
     # 获取热点视频的pv
-    sql = "select sum(real_pv) from news where hot_at < \"%s\"" % tommorow
+    sql = "select sum(real_pv) from videos where hot_at < \"%s\"" % tommorow
     rt = mysql_tool.querydb(sql, logger, sql)
     for v in rt:
         data[HOT_VIDEO_CATEGORY_ID]['channel_name'] = u"视频"
@@ -265,6 +445,11 @@ def get_edit_video_info(nday=1):
         data[HOT_VIDEO_CATEGORY_ID]['category_name'] = HOT_SHOW
 
     return data
+
+
+def set_pv_(mhash={}, k1=1, k2=1, k3=1):
+    if k1 in mhash.keys() and k2 in mhash.keys() and mhash[k2] > 0:
+        mhash[k3] = float(mhash[k1]) / mhash[k2]
 
 
 def process(nday=1):
@@ -292,6 +477,13 @@ def process(nday=1):
                     yd = r_json["_source"]
                     if "pv_total" in yd.keys():
                         v["pv"] = v["pv_total"] - yd["pv_total"]
+                        set_pv_(v, "pv", "dau_count", "pv_dau")
+                        set_pv_(v, "pv", "new_published_count", "pv_published")
+                        set_pv_(v, "effective_reading", "pv", "reading_pv")
+                        set_pv_(v, "comments_count", "pv", "comments_pv")
+                        set_pv_(v, "zan_count", "pv", "zan_pv")
+                        set_pv_(v, "like_count", "pv", "like_pv")
+                        set_pv_(v, "share_count", "pv", "share_pv")
             v['@timestamp'] = time_tool.get_someday_es_format(-nday)
             _id = time_tool.get_someday_str(-nday)
             url = URL_ELASTICSEARCH_EDIT_INFO + \
