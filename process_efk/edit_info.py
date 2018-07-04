@@ -163,15 +163,6 @@ def get_edit_news_info(nday=1):
     sql = "select category_id, count(*) from news_raw_auto_releases where created_at >= \"%s\" and created_at < \"%s\" group by category_id" % (day0, day1)
     handle_sql_hash_total(news_yd_choosed_count, sql, logger, TOTAL_ID)
 
-    # 获取有效阅读
-    news_effective_reading = {}
-    # sql = "select n.category_id, count(*) from news_effective_readings as ner join news as n on (ner.news_id = n.id) where ner.created_at >= \"%s\" and ner.created_at < \"%s\" and ner.effective != 0 group by n.category_id" % (day1, day2)
-    # sob = mysql_tool.sql_obj()
-    # rt = sob.querydb(sql, logger, sql)
-    # for v in rt:
-    #     news_effective_reading[int(v[0])] = int(v[1])
-    # sob.closedb()
-
     # 获取评论数
     comments_count_hash = {}
     sql = "select n.category_id, count(*) from news_comments as nc join news as n on(nc.news_id = n.id) where nc.created_at >= \"%s\" and nc.created_at < \"%s\" group by n.category_id" % (day1, day2)
@@ -205,7 +196,6 @@ def get_edit_news_info(nday=1):
         set_hash(news_yd_choosed_count, data[k], k, 'yd_choosed_count')
         set_hash(news_old_published_percentage,
                  data[k], k, 'old_published_percentage')
-        set_hash(news_effective_reading, data[k], k, 'effective_reading')
         set_hash(comments_count_hash, data[k], k, 'comments_count')
         set_hash(like_count_hash, data[k], k, 'like_count')
         set_hash(zan_count_hash, data[k], k, 'zan_count')
@@ -220,7 +210,6 @@ def get_edit_news_info(nday=1):
     set_hash(news_yd_choosed_count, data[TOTAL_ID], TOTAL_ID, 'yd_choosed_count')
     set_hash(news_old_published_percentage,
              data[TOTAL_ID], TOTAL_ID, 'old_published_percentage')
-    set_hash(news_effective_reading, data[TOTAL_ID], TOTAL_ID, 'effective_reading')
     set_hash(comments_count_hash, data[TOTAL_ID], TOTAL_ID, 'comments_count')
     set_hash(like_count_hash, data[TOTAL_ID], TOTAL_ID, 'like_count')
     set_hash(zan_count_hash, data[TOTAL_ID], TOTAL_ID, 'zan_count')
@@ -285,14 +274,6 @@ def get_hot_news_info(nday=1, data={}):
     for v in rt:
         data[HOT_NEWS_CATEGORY_ID]['yd_choosed_count'] = int(v[0])
 
-    # 获取热点资讯有效阅读
-    # sql = "select count(*) from news_effective_readings as ner join news as n on (ner.news_id = n.id) where ner.created_at >= \"%s\" and ner.created_at < \"%s\" and n.id in (select id from news where hot_at < \"%s\") and ner.effective != 0" % (day1, day2, day2)
-    # sob = mysql_tool.sql_obj()
-    # rt = sob.querydb(sql, logger, sql)
-    # for v in rt:
-    #     data[HOT_NEWS_CATEGORY_ID]['effective_reading'] = int(v[0])
-    # sob.closedb()
-
     # 获取热点资讯评论数
     sql = "select count(*) from news_comments as nc join news as n on(nc.news_id = n.id) where n.id in (select id from news where hot_at < \"%s\") and nc.created_at >= \"%s\" and nc.created_at < \"%s\"" % (day2, day1, day2)
     rt = mysql_tool.querydb(sql, logger, sql)
@@ -340,14 +321,6 @@ def get_hot_list_info(nday=1, data={}):
         rt = mysql_tool.querydb(sql, logger, sql)
         for v in rt:
             data[category_id]['new_published_count'] = int(v[0])
-
-        # 获取有效阅读
-        # sql = "select count(*) from news_effective_readings as ner join news as n on (ner.news_id = n.id) where ner.created_at >= \"%s\" and ner.created_at < \"%s\" and n.id in (select news_id from %s) and ner.effective != 0" % (day1, day2, table)
-        # sob = mysql_tool.sql_obj()
-        # rt = sob.querydb(sql, logger, sql)
-        # for v in rt:
-        #     data[category_id]['effective_reading'] = int(v[0])
-        # sob.closedb()
 
         # 获取评论数
         sql = "select count(*) from news_comments as nc join news as n on(nc.news_id = n.id) where n.id in (select news_id from %s) and nc.created_at >= \"%s\" and nc.created_at < \"%s\"" % (table, day1, day2)
@@ -398,11 +371,6 @@ def get_edit_video_info(nday=1):
     sql = "select category_id, count(*) from videos where published_at >= \"%s\" and published_at < \"%s\" group by category_id" % (day1, day2)
     handle_sql_hash_total(video_new_count, sql, logger, TOTAL_ID)
 
-    # 获取有效阅读
-    video_effective_reading = {}
-    sql = "select v.category_id, count(*) from video_effective_readings as ver join videos as v on (ver.video_id = v.id) where ver.created_at >= \"%s\" and ver.created_at < \"%s\" and ver.effective != 0 group by v.category_id" % (day1, day2)
-    handle_sql_hash_total(video_effective_reading, sql, logger, TOTAL_ID)
-
     # 获取视频pv
     sql = "select category_id, sum(real_pv) from videos group by category_id"
     rt = mysql_tool.querydb(sql, logger, sql)
@@ -417,7 +385,6 @@ def get_edit_video_info(nday=1):
         data[k]['pv_total'] = int(v[1])
         set_hash(video_categories, data[k], k, 'category_name')
         set_hash(video_new_count, data[k], k, 'new_published_count')
-        set_hash(video_effective_reading, data[k], k, 'effective_reading')
     data[TOTAL_ID] = {}
     data[TOTAL_ID]['channel_name'] = u"视频"
     data[TOTAL_ID]['channel'] = "video"
@@ -425,7 +392,6 @@ def get_edit_video_info(nday=1):
     data[TOTAL_ID]['category_id'] = TOTAL_ID
     data[TOTAL_ID]['pv_total'] = total
     set_hash(video_new_count, data[TOTAL_ID], TOTAL_ID, 'new_published_count')
-    set_hash(video_effective_reading, data[TOTAL_ID], TOTAL_ID, 'effective_reading')
 
     # 获取热点视频
     data[HOT_VIDEO_CATEGORY_ID] = {}
@@ -452,13 +418,121 @@ def set_pv_(mhash={}, k1=1, k2=1, k3=1):
         mhash[k3] = float(mhash[k1]) / mhash[k2]
 
 
+def get_news_effective_reading(nday=1, data_news={}):
+    # 获取资讯有效阅读
+    day1 = time_tool.get_someday_str(-nday)
+    day2 = time_tool.get_someday_str(-nday+1)
+    ner = {}
+    sql = "select news_id, count(*) from news_effective_readings where created_at >= \"%s\" and created_at < \"%s\" and effective != 0 group by news_id" % (day1, day2)
+    sob = mysql_tool.sql_obj()
+    rt = sob.querydb(sql, logger, sql)
+    total = 0 
+    for v in rt:
+        ner[int(v[0])] = int(v[1])
+        total += int(v[1])
+    sob.closedb()
+    data_news[TOTAL_ID]['effective_reading'] =  total
+    news_id_arr = [str(news_id) for news_id in ner.keys()]
+    # 获取普通类目有效阅读
+    sql = "select id, category_id from news where id in (%s)"
+    for i in range(0, len(news_id_arr), 1000):
+        id_arr = news_id_arr[i:i+1000]
+        sql_use = sql % (",".join(id_arr))
+        rt = mysql_tool.querydb(sql_use, logger, "select id, category_id from news for %d news" % len(id_arr))
+        for v in rt:
+            news_id = int(v[0])
+            category_id = int(v[1])
+            if category_id in data_news.keys():
+                if 'effective_reading' in data_news[category_id].keys():
+                    data_news[category_id]['effective_reading'] += ner[news_id]
+                else:
+                    data_news[category_id]['effective_reading'] = ner[news_id]
+    # 获取热点有效阅读
+    if HOT_NEWS_CATEGORY_ID in data_news.keys():
+        sql = "select id from news where id in (%s) and hot_at < \"" + day2 + "\""
+        for i in range(0, len(news_id_arr), 1000):
+            id_arr = news_id_arr[i:i+1000]
+            sql_use = sql % (",".join(id_arr))
+            rt = mysql_tool.querydb(sql_use, logger, "select id from news for %d news" % len(id_arr))
+            for v in rt:
+                news_id = int(v[0])
+                if 'effective_reading' in data_news[HOT_NEWS_CATEGORY_ID].keys():
+                    data_news[HOT_NEWS_CATEGORY_ID]['effective_reading'] += ner[news_id]
+                else:
+                    data_news[HOT_NEWS_CATEGORY_ID]['effective_reading'] = ner[news_id]
+    # 获取榜单有效阅读
+    for table, category_id in [("news_hot_lists", NEWS_HOT_LISTS), 
+            ("news_hot_seven_day_lists", NEWS_HOT_SEVEN), 
+            ("news_hot_total_lists", NEWS_HOT_TOTAL)]:
+        if category_id in data_news.keys():
+            sql = "select news_id from %s where news_id in (%s)"
+            for i in range(0, len(news_id_arr), 1000):
+                id_arr = news_id_arr[i:i+1000]
+                sql_use = sql % (table, ",".join(id_arr))
+                rt = mysql_tool.querydb(sql_use, logger, "select news_id for %d %s news" % (len(id_arr), table))
+                for v in rt:
+                    news_id = int(v[0])
+                    if 'effective_reading' in data_news[category_id].keys():
+                        data_news[category_id]['effective_reading'] += ner[news_id]
+                    else:
+                        data_news[category_id]['effective_reading'] = ner[news_id]
+
+    return data_news
+
+def get_video_effective_reading(nday=1, data_video={}):
+    # 获取视频有效阅读
+    day1 = time_tool.get_someday_str(-nday)
+    day2 = time_tool.get_someday_str(-nday+1)
+    ver = {}
+    sql = "select video_id, count(*) from video_effective_readings where created_at >= \"%s\" and created_at < \"%s\" and effective != 0 group by video_id" % (day1, day2)
+    sob = mysql_tool.sql_obj()
+    rt = sob.querydb(sql, logger, sql)
+    total = 0 
+    for v in rt:
+        ver[int(v[0])] = int(v[1])
+        total += int(v[1])
+    sob.closedb()
+    data_video[TOTAL_ID]['effective_reading'] =  total
+    video_id_arr = [str(video_id) for video_id in ver.keys()]
+    # 获取普通类目有效阅读
+    sql = "select id, category_id from videos where id in (%s)"
+    for i in range(0, len(video_id_arr), 1000):
+        id_arr = video_id_arr[i:i+1000]
+        sql_use = sql % (",".join(id_arr))
+        rt = mysql_tool.querydb(sql_use, logger, "select id, category_id from videos for %d videos" % len(id_arr))
+        for v in rt:
+            video_id = int(v[0])
+            category_id = int(v[1])
+            if category_id in data_video.keys():
+                if 'effective_reading' in data_video[category_id].keys():
+                    data_video[category_id]['effective_reading'] += ver[video_id]
+                else:
+                    data_video[category_id]['effective_reading'] = ver[video_id]
+    # 获取热点有效阅读
+    if HOT_VIDEO_CATEGORY_ID in data_video.keys():
+        sql = "select id from videos where id in (%s) and hot_at < \"" + day2 + "\""
+        for i in range(0, len(video_id_arr), 1000):
+            id_arr = video_id_arr[i:i+1000]
+            sql_use = sql % (",".join(id_arr))
+            rt = mysql_tool.querydb(sql_use, logger, "select id from hot videos for %d videos" % len(id_arr))
+            for v in rt:
+                video_id = int(v[0])
+                if 'effective_reading' in data_video[HOT_VIDEO_CATEGORY_ID].keys():
+                    data_video[HOT_VIDEO_CATEGORY_ID]['effective_reading'] += ver[video_id]
+                else:
+                    data_video[HOT_VIDEO_CATEGORY_ID]['effective_reading'] = ver[video_id]
+    return data_video
+
+
 def process(nday=1):
     mysql_tool.connectdb(host="47.96.238.205", database="taozuiredian-news")
     mysql_tool.querydb("SET NAMES utf8mb4")
     data_news = get_edit_news_info(nday)
     data_news = get_hot_news_info(nday, data_news)
     data_news = get_hot_list_info(nday, data_news)
+    data_news = get_news_effective_reading(nday, data_news)
     data_video = get_edit_video_info(nday)
+    data_video = get_video_effective_reading(nday, data_video)
     mysql_tool.closedb()
 
     for data in [data_news, data_video]:

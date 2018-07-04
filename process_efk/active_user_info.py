@@ -200,7 +200,7 @@ def get_device_arr(nday=1):
 
     data = {}
     r = requests.post(URL_ELASTICSEARCH_APPLOG, headers=JSON_HEADER,
-                      data=json.dumps(query), timeout=(10, 30))
+                      data=json.dumps(query), timeout=(60, 120))
     if 200 == r.status_code:
         r_json = r.json()
         data = [device['key']
@@ -502,7 +502,7 @@ def process(nday=1):
         url = URL_ELASTICSEARCH_ACTIVE_USER_INFO + "/" + \
             time_tool.get_someday_str(-nday) + "_" + k
         r = requests.post(url, headers=JSON_HEADER,
-                          data=json.dumps(data), timeout=(10, 20))
+                          data=json.dumps(data), timeout=(30, 60))
         if 200 != r.status_code and 201 != r.status_code:
             logger.error("request active_user_info index failed, status_code:%d, reason:%s",
                          r.status_code, r.reason)
