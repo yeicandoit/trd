@@ -16,8 +16,8 @@ import (
 )
 
 var logstr = "{\"@timestamp\":\"%s\", \"ip\":\"%s\", \"ua\":\"%s\", \"token\":\"%s\", \"user_id\":\"%d\", \"from\":\"%s\", \"channel\":\"%s\", \"udid\":\"%s\", \"os\":\"%s\", \"os_version\":\"%s\", \"app_version\":\"%s\", \"app_version_code\":%d, \"model\":\"%s\", \"intranet_ip\":\"%s\", \"ssid\":\"%s\", \"network_type\":\"%s\", \"key\":\"%s\", \"group\":\"%s\", \"index\":%d, \"news_id\":%d, \"category_id\":%d, \"category_index\":%d, \"task_key\":\"%s\", \"page\":%d, \"page_limit\":%d, \"use_time\":%d, \"brand\":\"%s\", \"is_first\":\"%t\", \"is_simulator\":\"%t\", \"imei1\":\"%s\","
-var logstr_single_log = "\"mac\":\"%s\", \"device_feature\":\"%s\", \"device_id\":\"%s\", \"imei2\":\"%s\", \"battery\":%d, \"idfa\":\"%s\"}"
-var logstr_android = "\"mac\":\"%s\", \"device_feature\":\"%s\", \"device_id\":\"%s\", \"imei2\":\"%s\", \"custom_params\":\"%s\"}"
+var logstr_single_log = "\"mac\":\"%s\", \"device_feature\":\"%s\", \"device_id\":\"%s\", \"imei2\":\"%s\", \"battery\":%d, \"idfa\":\"%s\", \"lng\":%g, \"lat\":%g, \"is_root\":\"%t\"}"
+var logstr_android = "\"mac\":\"%s\", \"device_feature\":\"%s\", \"device_id\":\"%s\", \"imei2\":\"%s\", \"custom_params\":\"%s\", \"lng\":%g, \"lat\":%g, \"is_root\":\"%t\"}"
 var logstr_ios = "\"battery\":%d, \"idfa\":\"%s\"}"
 
 func ApplogHandler(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +58,8 @@ func ApplogHandler(w http.ResponseWriter, r *http.Request) {
 		checkZero(applog.Page), checkZero(applog.PageLimit),
 		checkZero(applog.UseTime), applog.Brand, applog.IsFirst, applog.IsSimulator,
 		applog.Imei1, applog.Mac, applog.DeviceFeature, applog.DeviceId, applog.Imei2,
-		applog.Battery, applog.Idfa)
+		applog.Battery, applog.Idfa, checkFloat(applog.Lng), checkFloat(applog.Lat),
+		applog.IsRoot)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -146,6 +147,9 @@ func BatchlogHandler(w http.ResponseWriter, r *http.Request) {
 	imei2 := ""
 	battery := 0
 	idfa := ""
+	lng := float64(-1)
+	lat := float64(-1)
+	is_root := false
 
 	if 2 == batchlog.System {
 		brand = commonData[12]
@@ -170,6 +174,15 @@ func BatchlogHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		if 20 <= len(commonData) {
 			imei2 = limitLen(commonData[19], 20)
+		}
+		if 21 <= len(commonData) {
+			is_root = str2bool(commonData[20])
+		}
+		if 22 <= len(commonData) {
+			lng, _ = strconv.ParseFloat(commonData[21], 64)
+		}
+		if 23 <= len(commonData) {
+			lat, _ = strconv.ParseFloat(commonData[22], 64)
 		}
 	}
 
@@ -207,7 +220,7 @@ func BatchlogHandler(w http.ResponseWriter, r *http.Request) {
 				network_type, key, group, index, news_id, category_id,
 				category_index, task_key, page, page_limit, use_time, brand,
 				is_first, is_simulator, imei1, mac, device_feature, device_id,
-				imei2, custom_params)
+				imei2, custom_params, lng, lat, is_root)
 		} else {
 			util.Log.Info(logstr+logstr_ios, now_.Format("2006-01-02T15:04:05.000+08:00"),
 				ip, ua, token, user_id, from, channel, udid, os, os_version,
@@ -298,6 +311,13 @@ func limitLen(s string, length int) string {
 func checkZero(i int) int {
 	if 0 == i {
 		return -1
+	}
+	return i
+}
+
+func checkFloat(i float64) float64 {
+	if 0 == i {
+		return float64(-1)
 	}
 	return i
 }
