@@ -138,7 +138,7 @@ def get_query(nday=1):
 def get_signin(query_signin={}):
     data = {}
     r = requests.post(URL_ELASTICSEARCH_APPLOG, headers=JSON_HEADER,
-                      data=json.dumps(query_signin), timeout=(30, 60))
+                      data=json.dumps(query_signin), timeout=(30, 300))
     if 200 == r.status_code:
         r_json = r.json()
         for k, v in r_json['aggregations']['signin']['buckets'].items():
@@ -167,7 +167,7 @@ def add_signin(data, someday):
         }
         url = url_ + "_" + k
         r = requests.post(url, headers=JSON_HEADER,
-                          data=json.dumps(signin_data), timeout=(10, 20))
+                          data=json.dumps(signin_data), timeout=(30, 300))
         if 200 != r.status_code and 201 != r.status_code:
             logger.error("request signin index failed, status_code:%d, reason:%s",
                          r.status_code, r.reason)

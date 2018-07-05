@@ -63,7 +63,7 @@ def get_query(nday=1):
 
 def get_puv(query_puv={}):
     r = requests.post(URL_ELASTICSEARCH_APPLOG, headers=JSON_HEADER,
-                      data=json.dumps(query_puv), timeout=(20, 50))
+                      data=json.dumps(query_puv), timeout=(20, 300))
     puv = {}
     if 200 == r.status_code:
         r_json = r.json()
@@ -95,7 +95,7 @@ def set_puv(mtype, puv, someday):
         if "%" in url:
             url = url.replace("%", "")
         r = requests.post(url, headers=JSON_HEADER,
-                          data=json.dumps(puv_data), timeout=(10, 20))
+                          data=json.dumps(puv_data), timeout=(100, 200))
         if 200 != r.status_code and 201 != r.status_code:
             logger.error("request puv index failed, status_code:%d, reason:%s",
                          r.status_code, r.reason)
