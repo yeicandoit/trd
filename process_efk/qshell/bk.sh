@@ -25,7 +25,7 @@ sed -i "s/$applog/replace/g" qupload.json
 qshell_log=`grep "See upload log at path" log/$applog.upload.log | awk -F" " '{print $NF}'`
 grep "Failure:         0" $qshell_log
 if [ $? -ne 0 ]; then
-    python myEmail.py "qshell upload $applog failed"
+    python /opt/trd/applog/process/util/myEmail.py "qshell upload $applog failed"
     exit
 fi
 rm -rf /var/taoredian_es_bk/zip_$applog

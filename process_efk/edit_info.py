@@ -23,7 +23,7 @@ NEWS_HOT_TOTAL_SHOW = "总榜"
 TOTAL_ID = 10000
 TOTAL_SHOW = "汇总"
 
-# Add mapping: curl -H "Content-Type:application/json" -XPOST  http://127.0.0.1:9200/edit_info/doc/_mapping -d '{"properties": {"@timestamp":{"type":"date"}, "channel":{"type":"keyword"}, "channel_name":{"type":"keyword"}, "category_id":{"type":"long"}, "category_name":{"type":"keyword"}, "pv":{"type":"long"},"pv_total":{"type":"long"}, "effective_reading":{"type":"long"}, "like_count":{"type":"long"}, "like_count_total":{"type":"long"}, "comments_count":{"type":"long"}, "comments_count_total":{"type":"long"}, "new_count":{"type":"long"}, "zan_count":{"type":"long"}, "new_choosed_count":{"type":"long"}, "new_published_count":{"type":"long"}, "yd_choosed_count":{"type":"long"}, "old_published_percentage":{"type":"long"}, "dau_count":{"type":"long"}, "share_count":{"type":"long"}, "pv_dau":{"type":"float"}, "pv_published":{"type":"float"}, "reading_pv":{"type":"float"}, "comments_pv":{"type":"float"}, "zan_pv":{"type":"float"}, "like_pv":{"type":"float"}, "share_pv":{"type":"float"}}}'
+# Add mapping: curl -H "Content-Type:application/json" -XPOST  http://127.0.0.1:9200/edit_info/doc/_mapping -d '{"properties": {"@timestamp":{"type":"date"}, "channel":{"type":"keyword"}, "channel_name":{"type":"keyword"}, "category_id":{"type":"long"}, "category_name":{"type":"keyword"}, "pv":{"type":"long"},"pv_total":{"type":"long"}, "effective_reading":{"type":"long"}, "like_count":{"type":"long"}, "like_count_total":{"type":"long"}, "comments_count":{"type":"long"}, "comments_count_total":{"type":"long"}, "new_count":{"type":"long"}, "zan_count":{"type":"long"}, "new_choosed_count":{"type":"long"}, "new_published_count":{"type":"long"}, "yd_choosed_count":{"type":"long"}, "old_published_percentage":{"type":"long"}, "dau_count":{"type":"long"}, "share_count":{"type":"long"}, "pv_dau":{"type":"float"}, "pv_published":{"type":"float"}, "reading_pv":{"type":"float"}, "comments_pv":{"type":"float"}, "zan_pv":{"type":"float"}, "like_pv":{"type":"float"}, "share_pv":{"type":"float"}, "interval_pub_crawl":{"type":"float"}, "interval_pub_crawl_show":{"type":"keyword"}}}'
 
 
 def get_active_user_num(nday=1):
@@ -140,7 +140,7 @@ def get_edit_news_info(nday=1):
 
     # 获取今日发布的旧资讯占比数
     news_old_published_percentage = {}
-    sql = "select category_id, count(*) from news where published_at >= \"%s\" and published_at < \"%s\" and created_at < \"%s\" group by category_id" % (day1, day2, day1)
+    sql = "select n.category_id, count(*) from news as n join news_raws as nr on (n.raw_id = nr.id) where n.published_at >= \"%s\" and n.published_at < \"%s\" and nr.created_at < \"%s\" group by n.category_id" % (day1, day2, day1)
     rt = mysql_tool.querydb(sql, logger, sql)
     total = 0
     for v in rt:
@@ -152,6 +152,20 @@ def get_edit_news_info(nday=1):
     if TOTAL_ID in news_new_published_count.keys() and news_new_published_count[TOTAL_ID] != 0:
         news_old_published_percentage[TOTAL_ID] = round(
             float(total)/news_new_published_count[TOTAL_ID], 2)
+
+    # 发布资讯与抓取资讯平均时间间隔
+    interval_pub_crawl = {}
+    interval_pub_crawl_show = {}
+    sql = "select n.category_id, avg(timestampdiff(second, nr.created_at, n.published_at)) from news as n join news_raws as nr on (n.raw_id = nr.id) where n.published_at >= \"%s\" and n.published_at < \"%s\" group by n.category_id" % (day1, day2)
+    rt = mysql_tool.querydb(sql, logger, sql)
+    for v in rt:
+        interval_pub_crawl[int(v[0])] = int(v[1])
+        interval_pub_crawl_show[int(v[0])] = transfer_seconds2time(int(v[1]))
+    sql = "select avg(timestampdiff(second, nr.created_at, n.published_at)) from news as n join news_raws as nr on (n.raw_id = nr.id) where n.published_at >= \"%s\" and n.published_at < \"%s\"" % (day1, day2)
+    rt = mysql_tool.querydb(sql, logger, sql)
+    for v in rt:
+        interval_pub_crawl[TOTAL_ID] = int(v[0])
+        interval_pub_crawl_show[TOTAL_ID] = transfer_seconds2time(int(v[0]))
 
     # 获取当日挑选资讯
     news_new_chooseed_count = {}
@@ -199,6 +213,8 @@ def get_edit_news_info(nday=1):
         set_hash(comments_count_hash, data[k], k, 'comments_count')
         set_hash(like_count_hash, data[k], k, 'like_count')
         set_hash(zan_count_hash, data[k], k, 'zan_count')
+        set_hash(interval_pub_crawl, data[k], k, "interval_pub_crawl")
+        set_hash(interval_pub_crawl_show, data[k], k, "interval_pub_crawl_show")
     data[TOTAL_ID] = {}
     data[TOTAL_ID]['channel_name'] = u"资讯"
     data[TOTAL_ID]['channel'] = "news"
@@ -213,6 +229,8 @@ def get_edit_news_info(nday=1):
     set_hash(comments_count_hash, data[TOTAL_ID], TOTAL_ID, 'comments_count')
     set_hash(like_count_hash, data[TOTAL_ID], TOTAL_ID, 'like_count')
     set_hash(zan_count_hash, data[TOTAL_ID], TOTAL_ID, 'zan_count')
+    set_hash(interval_pub_crawl, data[TOTAL_ID], TOTAL_ID, "interval_pub_crawl")
+    set_hash(interval_pub_crawl_show, data[TOTAL_ID], TOTAL_ID, "interval_pub_crawl_show")
     data[TOTAL_ID]['dau_count'] = get_active_user_num(nday)
     data[TOTAL_ID]['share_count'] = get_share_num(nday)
 
@@ -239,6 +257,15 @@ def set_hash(shash={}, dhash={}, key1=1, key2=1):
         dhash[key2] = shash[key1]
 
 
+def transfer_seconds2time(seconds=0):
+    if seconds > 3600:
+        return str(seconds/3600) + u"时" + str((seconds%3600)/60) + u"分" + str(seconds%60) + u"秒"
+    if seconds > 60:
+        return str(seconds/60) + u"分" + str(seconds%60) + u"秒"
+    else:
+        return str(seconds) + u"秒"
+
+
 def get_hot_news_info(nday=1, data={}):
     day0 = time_tool.get_someday_str(-nday-1)
     day1 = time_tool.get_someday_str(-nday)
@@ -255,12 +282,19 @@ def get_hot_news_info(nday=1, data={}):
         hot_new_published_count = int(v[0])
 
     # 获取今日发布的热点旧资讯占比数
-    sql = "select count(*) from news where hot_at >= \"%s\" and hot_at < \"%s\" and published_at < \"%s\" and created_at < \"%s\"" % (day1, day2, day2, day1)
+    sql = "select count(*) from news as n join news_raws as nr on (n.raw_id = nr.id) where n.hot_at >= \"%s\" and n.hot_at < \"%s\" and n.published_at < \"%s\" and nr.created_at < \"%s\"" % (day1, day2, day2, day1)
     rt = mysql_tool.querydb(sql, logger, sql)
     for v in rt:
         if hot_new_published_count > 0:
             data[HOT_NEWS_CATEGORY_ID]['old_published_percentage'] = round(
                 float(v[0])/hot_new_published_count, 2)
+
+    # 获取热点资讯发布与抓取平均时间间隔
+    sql = "select avg(timestampdiff(second, nr.created_at, n.published_at)) from news as n join news_raws as nr on (n.raw_id = nr.id) where n.hot_at >= \"%s\" and n.hot_at < \"%s\" and n.published_at < \"%s\"" % (day1, day2, day2)
+    rt = mysql_tool.querydb(sql, logger, sql)
+    for v in rt:
+        data[HOT_NEWS_CATEGORY_ID]['interval_pub_crawl'] = int(v[0])
+        data[HOT_NEWS_CATEGORY_ID]['interval_pub_crawl_show'] = transfer_seconds2time(int(v[0]))
 
     # 获取当天挑选热点资讯
     sql = "select count(*) from news_raw_auto_releases where created_at >= \"%s\" and created_at < \"%s\" and is_hot !=0" % (day1, day2)
