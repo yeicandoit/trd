@@ -23,7 +23,7 @@ NEWS_HOT_TOTAL_SHOW = "总榜"
 TOTAL_ID = 10000
 TOTAL_SHOW = "汇总"
 
-# Add mapping: curl -H "Content-Type:application/json" -XPOST  http://127.0.0.1:9200/edit_info/doc/_mapping -d '{"properties": {"@timestamp":{"type":"date"}, "channel":{"type":"keyword"}, "channel_name":{"type":"keyword"}, "category_id":{"type":"long"}, "category_name":{"type":"keyword"}, "pv":{"type":"long"},"pv_total":{"type":"long"}, "effective_reading":{"type":"long"}, "like_count":{"type":"long"}, "like_count_total":{"type":"long"}, "comments_count":{"type":"long"}, "comments_count_total":{"type":"long"}, "new_count":{"type":"long"}, "zan_count":{"type":"long"}, "new_choosed_count":{"type":"long"}, "new_published_count":{"type":"long"}, "yd_choosed_count":{"type":"long"}, "old_published_percentage":{"type":"long"}, "dau_count":{"type":"long"}, "share_count":{"type":"long"}, "pv_dau":{"type":"float"}, "pv_published":{"type":"float"}, "reading_pv":{"type":"float"}, "comments_pv":{"type":"float"}, "zan_pv":{"type":"float"}, "like_pv":{"type":"float"}, "share_pv":{"type":"float"}, "interval_pub_crawl":{"type":"float"}, "interval_pub_crawl_show":{"type":"keyword"}}}'
+# Add mapping: curl -H "Content-Type:application/json" -XPOST  http://127.0.0.1:9200/edit_info/doc/_mapping -d '{"properties": {"@timestamp":{"type":"date"}, "channel":{"type":"keyword"}, "channel_name":{"type":"keyword"}, "category_id":{"type":"long"}, "category_name":{"type":"keyword"}, "pv":{"type":"long"},"pv_total":{"type":"long"}, "effective_reading":{"type":"long"}, "like_count":{"type":"long"}, "like_count_total":{"type":"long"}, "comments_count":{"type":"long"}, "comments_count_total":{"type":"long"}, "new_count":{"type":"long"}, "zan_count":{"type":"long"}, "new_choosed_count":{"type":"long"}, "new_published_count":{"type":"long"}, "yd_choosed_count":{"type":"long"}, "old_published_percentage":{"type":"long"}, "dau_count":{"type":"long"}, "share_count":{"type":"long"}, "pv_dau":{"type":"float"}, "pv_published":{"type":"float"}, "reading_pv":{"type":"float"}, "comments_pv":{"type":"float"}, "zan_pv":{"type":"float"}, "like_pv":{"type":"float"}, "share_pv":{"type":"float"}, "interval_pub_crawl":{"type":"float"}, "interval_pub_crawl_show":{"type":"keyword"}, "old_published_percentage_f":{"type":"float"}}}'
 
 
 def get_active_user_num(nday=1):
@@ -209,7 +209,7 @@ def get_edit_news_info(nday=1):
         set_hash(news_new_chooseed_count, data[k], k, 'new_choosed_count')
         set_hash(news_yd_choosed_count, data[k], k, 'yd_choosed_count')
         set_hash(news_old_published_percentage,
-                 data[k], k, 'old_published_percentage')
+                 data[k], k, 'old_published_percentage_f')
         set_hash(comments_count_hash, data[k], k, 'comments_count')
         set_hash(like_count_hash, data[k], k, 'like_count')
         set_hash(zan_count_hash, data[k], k, 'zan_count')
@@ -225,7 +225,7 @@ def get_edit_news_info(nday=1):
     set_hash(news_new_chooseed_count, data[TOTAL_ID], TOTAL_ID, 'new_choosed_count')
     set_hash(news_yd_choosed_count, data[TOTAL_ID], TOTAL_ID, 'yd_choosed_count')
     set_hash(news_old_published_percentage,
-             data[TOTAL_ID], TOTAL_ID, 'old_published_percentage')
+             data[TOTAL_ID], TOTAL_ID, 'old_published_percentage_f')
     set_hash(comments_count_hash, data[TOTAL_ID], TOTAL_ID, 'comments_count')
     set_hash(like_count_hash, data[TOTAL_ID], TOTAL_ID, 'like_count')
     set_hash(zan_count_hash, data[TOTAL_ID], TOTAL_ID, 'zan_count')
@@ -286,7 +286,7 @@ def get_hot_news_info(nday=1, data={}):
     rt = mysql_tool.querydb(sql, logger, sql)
     for v in rt:
         if hot_new_published_count > 0:
-            data[HOT_NEWS_CATEGORY_ID]['old_published_percentage'] = round(
+            data[HOT_NEWS_CATEGORY_ID]['old_published_percentage_f'] = round(
                 float(v[0])/hot_new_published_count, 2)
 
     # 获取热点资讯发布与抓取平均时间间隔
