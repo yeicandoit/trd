@@ -51,7 +51,7 @@ def get_cash_user(nday=1):
     sql_cash = "select sum(price) from user_withdraw_orders where withdraw_status = 3 and updated_at >= \"%s\" and updated_at < \"%s\"" % (
         day1, day2)
     rt = mysql_tool.querydb(sql_cash, logger, sql_cash)
-    if len(rt) > 0:
+    if len(rt) > 0 and rt[0][0] is not None:
         data['cash_out'] = int(rt[0][0]) / 100
 
     sql_point = "select sum(point) from user_point_bills where created_at >= \"%s\" and created_at < \"%s\"" % (
