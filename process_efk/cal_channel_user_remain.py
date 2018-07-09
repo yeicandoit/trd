@@ -110,7 +110,7 @@ def set_channel_user_remain_rate(key, channel, rate, new_user_num, someday):
     url = cr.URL_ELASTICSEARCH_REMAIN_ID % _id + "_" + channel
     timestamp = dt.isoformat() + "+08:00"
 
-    r = requests.get(url, timeout=(10, 20))
+    r = requests.get(url, timeout=(10, 120))
     r_json = r.json()
     if r_json["found"]:
         data = r_json["_source"]

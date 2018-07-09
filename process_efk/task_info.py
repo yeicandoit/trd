@@ -71,7 +71,7 @@ def process(nday=1):
         _id = time_tool.get_someday_str(-nday)
         url = URL_ELASTICSEARCH_TASK_INFO + "/" + _id + "_" + str(k)
         r = requests.post(url, headers=JSON_HEADER,
-                          data=json.dumps(v), timeout=(10, 20))
+                          data=json.dumps(v), timeout=(10, 120))
         if 200 != r.status_code and 201 != r.status_code:
             logger.error("request task_info index failed, status_code:%d, reason:%s",
                          r.status_code, r.reason)
