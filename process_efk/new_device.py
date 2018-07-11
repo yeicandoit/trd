@@ -1,3 +1,4 @@
+# coding=utf-8
 import requests
 import time
 import json
@@ -101,6 +102,7 @@ def get_new_device(arr_device_id=[]):
             ]
         },
         "query": {
+            # TODO device_id.keyword 数组必须小于10，否则查询失效,有时间看下啥问题
             "constant_score": {
                 "filter": {
                     "terms": {
@@ -143,11 +145,11 @@ def add_new_device(new_device_ids=[], hash_device_ids={}):
         device_data["channel"] = hash_device_ids[device_id]['channel'] if device_id in hash_device_ids.keys(
         ) else "unkown"
         logger.info(device_data)
-        requests.post(URL_ELASTICSEARCH_DEVICE_ADD, headers=JSON_HEADER,
+        requests.post(URL_ELASTICSEARCH_DEVICE_ADD + "/" + device_id, headers=JSON_HEADER,
                       data=json.dumps(device_data), timeout=(60, 120))
 
 
 if __name__ == '__main__':
-    hash_device_ids = get_device()
+    hash_device_ids = get_device(90)
     new_device_ids = get_new_device(hash_device_ids.keys())
     add_new_device(new_device_ids, hash_device_ids)

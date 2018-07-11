@@ -158,7 +158,7 @@ def set_remain_rate(d=0):
                 print "nd%dday[%s]' lenght is zero" % (key, channel)
                 continue
             ret = list(set(nd[channel]).intersection(set(yud)))
-            rate = round(len(ret)/float(len(nd[channel])), 2)
+            rate = round(len(ret)/float(len(nd[channel])), 4)
             print key, rate, len(ret), len(
                 nd[channel]), len(yud), channel
             set_channel_user_remain_rate(

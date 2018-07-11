@@ -10,7 +10,7 @@ check_url = [
     "signin/doc/%s_web_activity_invite_20180428_share_page_download_button_click",
     "remain/doc/%s_official",  # yesterday of yesterday
     "puv4channel/doc/%s_23-50_app_main_list_8_6_act_show_official",
-    "puv/doc/%s_group_app_main_list_item_1",
+    "puv/doc/%s_group_app_news_recommend_act_click",
     "parent_vip_info/doc/%s",
     "parent_info/doc/%s_official",
     "online/doc/%s_23-55-00",

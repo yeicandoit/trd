@@ -1,4 +1,4 @@
-applog=`date +"applog-%Y.%m.%d" -d "-15 days"`
+applog=`date +"applog-%Y.%m.%d" -d "-3 days"`
 
 curl -H "Content-Type:application/json" -XPUT http://127.0.0.1:9200/_snapshot/$applog -d "{\"type\":\"fs\",\"settings\":{\"location\":\"/var/taoredian_es_bk/$applog\"}}" > log/$applog.upload.log
 grep "\"acknowledged\":true"  log/$applog.upload.log
