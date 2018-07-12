@@ -2,6 +2,7 @@
 import requests
 import json
 import logging.config
+import active
 from util import mysql_tool, time_tool
 
 
@@ -10,7 +11,7 @@ logger = logging.getLogger('main')
 URL_ELASTICSEARCH_TASK_INFO = "http://localhost:9200/task_info/doc"
 JSON_HEADER = {"Content-Type": "application/json"}
 
-# Add mapping: curl -H "Content-Type:application/json" -XPOST  http://127.0.0.1:9200/task_info/doc/_mapping -d '{"properties": {"@timestamp":{"type":"date"}, "task_name":{"type":"keyword"}, "task_id":{"type":"long"}, "num":{"type":"float"}, "num_for_no_child":{"type":"float"}, "num_for_parent":{"type":"float"}, "n":{"type":"float"}, "n_for_no_child":{"type":"float"}, "n_for_parent":{"type":"float"}}}'
+# Add mapping: curl -H "Content-Type:application/json" -XPOST  http://127.0.0.1:9200/task_info/doc/_mapping -d '{"properties": {"@timestamp":{"type":"date"}, "task_name":{"type":"keyword"}, "task_id":{"type":"long"}, "num":{"type":"float"}, "num_for_no_child":{"type":"float"}, "num_for_parent":{"type":"float"}, "n":{"type":"float"}, "n_for_no_child":{"type":"float"}, "n_for_parent":{"type":"float"}, "num_dau":{"type":"float"}}}'
 
 
 def get_task_info(nday=1):
@@ -63,11 +64,15 @@ def process(nday=1):
     data = get_task_info(nday)
     mysql_tool.closedb()
 
+    dau, _ = active.get_user_device_count(active.get_query(-nday)) 
+
     for k, v in data.items():
         v['@timestamp'] = time_tool.get_someday_es_format(-nday)
         if k != 0 and 'num' in v.keys() and 'num_for_parent' in v.keys():
             v['num_for_no_child'] = v['num'] - v['num_for_parent']
             v['n_for_no_child'] = v['n'] - v['n_for_parent']
+            if dau > 0:
+                v['num_dau'] = float(v['num']) / dau
         _id = time_tool.get_someday_str(-nday)
         url = URL_ELASTICSEARCH_TASK_INFO + "/" + _id + "_" + str(k)
         r = requests.post(url, headers=JSON_HEADER,
