@@ -2,6 +2,7 @@
 import requests
 import json
 import logging.config
+import edit_pv_uv
 from util import mysql_tool, time_tool
 
 
@@ -23,7 +24,7 @@ NEWS_HOT_TOTAL_SHOW = "总榜"
 TOTAL_ID = 10000
 TOTAL_SHOW = "汇总"
 
-# Add mapping: curl -H "Content-Type:application/json" -XPOST  http://127.0.0.1:9200/edit_info/doc/_mapping -d '{"properties": {"@timestamp":{"type":"date"}, "channel":{"type":"keyword"}, "channel_name":{"type":"keyword"}, "category_id":{"type":"long"}, "category_name":{"type":"keyword"}, "pv":{"type":"long"},"pv_total":{"type":"long"}, "effective_reading":{"type":"long"}, "like_count":{"type":"long"}, "like_count_total":{"type":"long"}, "comments_count":{"type":"long"}, "comments_count_total":{"type":"long"}, "new_count":{"type":"long"}, "zan_count":{"type":"long"}, "new_choosed_count":{"type":"long"}, "new_published_count":{"type":"long"}, "yd_choosed_count":{"type":"long"}, "old_published_percentage":{"type":"long"}, "dau_count":{"type":"long"}, "share_count":{"type":"long"}, "pv_dau":{"type":"float"}, "pv_published":{"type":"float"}, "reading_pv":{"type":"float"}, "comments_pv":{"type":"float"}, "zan_pv":{"type":"float"}, "like_pv":{"type":"float"}, "share_pv":{"type":"float"}, "interval_pub_crawl":{"type":"float"}, "interval_pub_crawl_show":{"type":"keyword"}, "old_published_percentage_f":{"type":"float"}}}'
+# Add mapping: curl -H "Content-Type:application/json" -XPOST  http://127.0.0.1:9200/edit_info/doc/_mapping -d '{"properties": {"@timestamp":{"type":"date"}, "channel":{"type":"keyword"}, "channel_name":{"type":"keyword"}, "category_id":{"type":"long"}, "category_name":{"type":"keyword"}, "pv":{"type":"long"},"pv_total":{"type":"long"}, "effective_reading":{"type":"long"}, "like_count":{"type":"long"}, "like_count_total":{"type":"long"}, "comments_count":{"type":"long"}, "comments_count_total":{"type":"long"}, "new_count":{"type":"long"}, "zan_count":{"type":"long"}, "new_choosed_count":{"type":"long"}, "new_published_count":{"type":"long"}, "yd_choosed_count":{"type":"long"}, "old_published_percentage":{"type":"long"}, "dau_count":{"type":"long"}, "share_count":{"type":"long"}, "pv_dau":{"type":"float"}, "pv_published":{"type":"float"}, "reading_pv":{"type":"float"}, "comments_pv":{"type":"float"}, "zan_pv":{"type":"float"}, "like_pv":{"type":"float"}, "share_pv":{"type":"float"}, "interval_pub_crawl":{"type":"float"}, "interval_pub_crawl_show":{"type":"keyword"}, "old_published_percentage_f":{"type":"float"}, "show_all_pv":{"type":"long"}, "show_all_uv":{"type":"long"}, "show_all_pv_uv":{"type":"float"}, "page_click_pv":{"type":"long"}, "page_click_uv":{"type":"long"}}}'
 
 
 def get_active_user_num(nday=1):
@@ -474,6 +475,23 @@ def get_news_effective_reading(nday=1, data_news={}):
     sob.closedb()
     data_news[TOTAL_ID]['effective_reading'] = total
     news_id_arr = [str(news_id) for news_id in ner.keys()]
+    # 获取榜单有效阅读
+    for table, category_id in [("news_hot_seven_day_lists", NEWS_HOT_SEVEN),
+                               ("news_hot_lists", NEWS_HOT_LISTS),
+                               ("news_hot_total_lists", NEWS_HOT_TOTAL)]:
+        if category_id in data_news.keys():
+            sql = "select news_id from %s where news_id in (%s)"
+            for i in range(0, len(news_id_arr), 1000):
+                id_arr = news_id_arr[i:i+1000]
+                sql_use = sql % (table, ",".join(id_arr))
+                rt = mysql_tool.querydb(
+                    sql_use, logger, "select news_id for %d %s news" % (len(id_arr), table))
+                for v in rt:
+                    news_id = int(v[0])
+                    if 'effective_reading' in data_news[category_id].keys():
+                        data_news[category_id]['effective_reading'] += ner[news_id]
+                    else:
+                        data_news[category_id]['effective_reading'] = ner[news_id]
     # 获取普通类目有效阅读
     sql = "select id, category_id from news where id in (%s)"
     for i in range(0, len(news_id_arr), 1000):
@@ -504,24 +522,7 @@ def get_news_effective_reading(nday=1, data_news={}):
                     data_news[HOT_NEWS_CATEGORY_ID]['effective_reading'] += ner[news_id]
                 else:
                     data_news[HOT_NEWS_CATEGORY_ID]['effective_reading'] = ner[news_id]
-    # 获取榜单有效阅读
-    for table, category_id in [("news_hot_lists", NEWS_HOT_LISTS),
-                               ("news_hot_seven_day_lists", NEWS_HOT_SEVEN),
-                               ("news_hot_total_lists", NEWS_HOT_TOTAL)]:
-        if category_id in data_news.keys():
-            sql = "select news_id from %s where news_id in (%s)"
-            for i in range(0, len(news_id_arr), 1000):
-                id_arr = news_id_arr[i:i+1000]
-                sql_use = sql % (table, ",".join(id_arr))
-                rt = mysql_tool.querydb(
-                    sql_use, logger, "select news_id for %d %s news" % (len(id_arr), table))
-                for v in rt:
-                    news_id = int(v[0])
-                    if 'effective_reading' in data_news[category_id].keys():
-                        data_news[category_id]['effective_reading'] += ner[news_id]
-                    else:
-                        data_news[category_id]['effective_reading'] = ner[news_id]
-
+    
     return data_news
 
 
@@ -574,15 +575,22 @@ def get_video_effective_reading(nday=1, data_video={}):
 
 
 def process(nday=1):
+    data_pv_uv = edit_pv_uv.process(nday)
+
     mysql_tool.connectdb(host="47.96.238.205", database="taozuiredian-news")
     mysql_tool.querydb("SET NAMES utf8mb4")
     data_news = get_edit_news_info(nday)
-    data_news = get_hot_news_info(nday, data_news)
     data_news = get_hot_list_info(nday, data_news)
+    data_news = get_hot_news_info(nday, data_news)
     data_news = get_news_effective_reading(nday, data_news)
     data_video = get_edit_video_info(nday)
     data_video = get_video_effective_reading(nday, data_video)
     mysql_tool.closedb()
+
+    for k, v in data_pv_uv.items():
+        if k in data_news.keys():
+            for k_, v_ in v.items():
+                data_news[k][k_] = v_
 
     for data in [data_news, data_video]:
         for k, v in data.items():
