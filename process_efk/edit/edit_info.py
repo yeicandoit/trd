@@ -95,9 +95,7 @@ def get_share_num(nday=1):
                             }
 
                         }
-                    }
-                ],
-                "must": [
+                    },
                     {
                         "match_phrase": {
                             "key.keyword": {
