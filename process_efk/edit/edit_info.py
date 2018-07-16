@@ -24,7 +24,7 @@ NEWS_HOT_TOTAL_SHOW = "总榜"
 TOTAL_ID = 10000
 TOTAL_SHOW = "汇总"
 
-# Add mapping: curl -H "Content-Type:application/json" -XPOST  http://127.0.0.1:9200/edit_info/doc/_mapping -d '{"properties": {"@timestamp":{"type":"date"}, "channel":{"type":"keyword"}, "channel_name":{"type":"keyword"}, "category_id":{"type":"long"}, "category_name":{"type":"keyword"}, "pv":{"type":"long"},"pv_total":{"type":"long"}, "effective_reading":{"type":"long"}, "like_count":{"type":"long"}, "like_count_total":{"type":"long"}, "comments_count":{"type":"long"}, "comments_count_total":{"type":"long"}, "new_count":{"type":"long"}, "zan_count":{"type":"long"}, "new_choosed_count":{"type":"long"}, "new_published_count":{"type":"long"}, "yd_choosed_count":{"type":"long"}, "old_published_percentage":{"type":"long"}, "dau_count":{"type":"long"}, "share_count":{"type":"long"}, "pv_dau":{"type":"float"}, "pv_published":{"type":"float"}, "reading_pv":{"type":"float"}, "comments_pv":{"type":"float"}, "zan_pv":{"type":"float"}, "like_pv":{"type":"float"}, "share_pv":{"type":"float"}, "interval_pub_crawl":{"type":"float"}, "interval_pub_crawl_show":{"type":"keyword"}, "old_published_percentage_f":{"type":"float"}, "show_all_pv":{"type":"long"}, "show_all_uv":{"type":"long"}, "show_all_pv_uv":{"type":"float"}, "page_click_pv":{"type":"long"}, "page_click_uv":{"type":"long"}}}'
+# Add mapping: curl -H "Content-Type:application/json" -XPOST  http://127.0.0.1:9200/edit_info/doc/_mapping -d '{"properties": {"@timestamp":{"type":"date"}, "channel":{"type":"keyword"}, "channel_name":{"type":"keyword"}, "category_id":{"type":"long"}, "category_name":{"type":"keyword"}, "pv":{"type":"long"},"pv_total":{"type":"long"}, "effective_reading":{"type":"long"}, "like_count":{"type":"long"}, "like_count_total":{"type":"long"}, "comments_count":{"type":"long"}, "comments_count_total":{"type":"long"}, "new_count":{"type":"long"}, "zan_count":{"type":"long"}, "new_choosed_count":{"type":"long"}, "new_published_count":{"type":"long"}, "yd_choosed_count":{"type":"long"}, "old_published_percentage":{"type":"long"}, "dau_count":{"type":"long"}, "share_count":{"type":"long"}, "pv_dau":{"type":"float"}, "pv_published":{"type":"float"}, "reading_pv":{"type":"float"}, "comments_pv":{"type":"float"}, "zan_pv":{"type":"float"}, "like_pv":{"type":"float"}, "share_pv":{"type":"float"}, "interval_pub_crawl":{"type":"float"}, "interval_pub_crawl_show":{"type":"keyword"}, "old_published_percentage_f":{"type":"float"}, "show_all_pv":{"type":"long"}, "show_all_uv":{"type":"long"}, "show_all_pv_uv":{"type":"float"}, "page_click_pv":{"type":"long"}, "page_click_uv":{"type":"long"}, "show_all_pv_uv_new_published":{"type":"float"}}}'
 
 
 def get_active_user_num(nday=1):
@@ -616,6 +616,7 @@ def process(nday=1):
                         set_pv_(v, "like_count", "pv", "like_pv")
                         set_pv_(v, "share_count", "pv", "share_pv")
             v['@timestamp'] = time_tool.get_someday_es_format(-nday)
+            set_pv_(v, "show_all_pv_uv", "new_published_count", "show_all_pv_uv_new_published")
             _id = time_tool.get_someday_str(-nday)
             url = URL_ELASTICSEARCH_EDIT_INFO + \
                 "/" + _id + "_" + v['channel'] + "_" + str(k)
