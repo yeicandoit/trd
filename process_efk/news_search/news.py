@@ -44,6 +44,8 @@ def process(nday=0):
     news = get_news(nday)
     for k, v in news.items():
         v['content'] = get_news_content(k)
+        if v['content'] == "":
+            continue
         url = config.URL_NEWS_SEARCH + "/" + str(k)
         r = requests.post(url, headers=config.JSON_HEADER,
                           data=json.dumps(v), timeout=(30, 120))
@@ -56,3 +58,5 @@ def process(nday=0):
 
 if __name__ == '__main__':
     process()
+    # for i in range(1, 365, 1):
+    #     process(i)
