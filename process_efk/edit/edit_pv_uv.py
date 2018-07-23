@@ -88,7 +88,7 @@ def get_puv4news_page_click(nday=1, news_id_arr=[]):
                                 },
                                 {
                                     "match_phrase": {
-                                        "key.keyword": "app_news_recommend_click"
+                                        "group.keyword": "app_news_recommend_click"
                                     }
                                 },
                                 {
